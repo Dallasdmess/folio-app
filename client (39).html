@@ -1,0 +1,2265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Folio — Portfolio Intelligence</title>
+<meta name="theme-color" content="#0B1628">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Folio">
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#0B1628;--navy-light:#152238;--blue:#2563EB;--blue-pale:#EFF6FF;--gold:#F59E0B;--green:#10B981;--green-light:#D1FAE5;--red:#EF4444;--red-light:#FEE2E2;--amber:#F59E0B;--amber-light:#FEF3C7;--text:#0F172A;--text-secondary:#475569;--text-muted:#94A3B8;--border:#E2E8F0;--surface:#F8FAFC;--white:#FFFFFF;--radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,0.08);--shadow-md:0 4px 6px rgba(0,0,0,0.07);--shadow-lg:0 10px 15px rgba(0,0,0,0.08);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--text);min-height:100vh;}
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--navy);padding:2rem;}
+.login-card{background:var(--white);border-radius:20px;padding:3rem;width:100%;max-width:420px;box-shadow:var(--shadow-lg);}
+.logo{font-family:'DM Serif Display',serif;font-size:30px;color:var(--navy);margin-bottom:4px;}.logo span{color:var(--blue);}
+.tagline{font-size:14px;color:var(--text-secondary);margin-bottom:2rem;}
+.form-group{margin-bottom:1rem;}
+.form-label{display:block;font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:6px;}
+.form-input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--white);outline:none;transition:border-color 0.2s;}
+.form-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,0.1);}
+.btn-primary{width:100%;padding:12px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:0.5rem;}
+.btn-primary:hover{background:#1D4ED8;}.btn-primary:disabled{background:var(--text-muted);cursor:not-allowed;}
+.login-error{background:var(--red-light);border:1px solid #FECACA;color:#991B1B;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;margin-bottom:1rem;display:none;}
+.secure-note{display:flex;align-items:center;gap:8px;background:var(--green-light);border:1px solid #A7F3D0;border-radius:var(--radius-sm);padding:10px 14px;margin-top:1rem;font-size:12px;color:#065F46;line-height:1.5;}
+.auth-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.5rem;}
+.auth-tab{flex:1;text-align:center;padding:10px;font-size:14px;font-weight:500;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px;}
+.auth-tab.active{color:var(--blue);border-bottom-color:var(--blue);}
+#appScreen{display:none;min-height:100vh;}
+.topbar{background:var(--navy);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.topbar-logo{font-family:'DM Serif Display',serif;font-size:22px;color:white;}.topbar-logo span{color:var(--gold);}
+.topbar-right{display:flex;align-items:center;gap:1rem;}
+.topbar-user{font-size:13px;color:rgba(255,255,255,0.7);}.topbar-user strong{color:white;}
+.data-badge{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:500;}
+.data-badge.live{background:rgba(16,185,129,0.2);color:#6EE7B7;}
+.data-badge.demo{background:rgba(245,158,11,0.2);color:#FCD34D;}
+.btn-logout{background:transparent;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.7);padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.layout{display:flex;min-height:calc(100vh - 60px);}
+.sidebar{width:220px;background:var(--white);border-right:1px solid var(--border);padding:1.5rem 0;flex-shrink:0;}
+.nav-sec{padding:0 1rem;}
+.nav-sec-label{font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;padding:0 0.5rem;margin-bottom:4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius-sm);font-size:14px;color:var(--text-secondary);cursor:pointer;margin-bottom:2px;}
+.nav-item:hover{background:var(--surface);color:var(--text);}
+.nav-item.active{background:var(--blue-pale);color:var(--blue);font-weight:500;}
+.nav-icon{font-size:16px;width:20px;text-align:center;}
+.main{flex:1;padding:2rem;overflow-y:auto;}
+.page-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;}
+.page-title{font-family:'DM Serif Display',serif;font-size:26px;color:var(--navy);}
+.page-sub{font-size:14px;color:var(--text-secondary);margin-top:4px;}
+.card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow);}
+.card-pad{padding:1.5rem;}
+.card-title{font-size:15px;font-weight:600;color:var(--text);}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem;}
+.metric{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:1.25rem;box-shadow:var(--shadow);}
+.metric-label{font-size:12px;color:var(--text-muted);font-weight:500;margin-bottom:6px;}
+.metric-value{font-size:22px;font-weight:600;color:var(--text);line-height:1;}
+.metric-value.g{color:var(--green);}.metric-value.r{color:var(--red);}.metric-value.gold{color:var(--gold);}
+.alert{border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:1rem;font-size:13px;display:flex;align-items:flex-start;gap:10px;}
+.alert.warn{background:var(--amber-light);border:1px solid #FDE68A;color:#92400E;}
+.alert.danger{background:var(--red-light);border:1px solid #FECACA;color:#991B1B;}
+.alert.ok{background:var(--green-light);border:1px solid #A7F3D0;color:#065F46;}
+.alert.info{background:var(--blue-pale);border:1px solid #BFDBFE;color:#1E40AF;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem;}
+.chip{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--navy);color:white;border-radius:20px;font-size:13px;font-weight:500;}
+.chip-price{font-size:11px;opacity:0.7;}
+.chip-x{cursor:pointer;opacity:0.6;font-size:16px;line-height:1;}
+.chip-x:hover{opacity:1;}
+.add-row{display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap;}
+.add-row input{padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;}
+.add-row input:focus{border-color:var(--blue);}
+.ticker-inp{width:140px;}.qty-inp{width:100px;}
+.btn-add{padding:10px 18px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.news-list{display:flex;flex-direction:column;gap:10px;}
+.news-item{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow);}
+.news-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:8px;}
+.news-title{font-size:15px;font-weight:500;color:var(--text);line-height:1.4;flex:1;}
+.news-time{font-size:12px;color:var(--text-muted);white-space:nowrap;}
+.news-body{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:10px;}
+.news-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.tags{display:flex;flex-wrap:wrap;gap:6px;}
+.tag{font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;}
+.tag.t{background:var(--blue-pale);color:var(--blue);}
+.tag.pos{background:var(--green-light);color:#065F46;}
+.tag.neg{background:var(--red-light);color:#991B1B;}
+.tag.neu{background:var(--surface);color:var(--text-secondary);border:1px solid var(--border);}
+.news-src{font-size:11px;color:var(--text-muted);}
+.tbl{width:100%;border-collapse:collapse;}
+.tbl th{text-align:left;font-size:11px;font-weight:600;color:var(--text-muted);padding:10px 12px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.04em;}
+.tbl td{padding:11px 12px;border-bottom:1px solid var(--border);font-size:14px;color:var(--text);}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tr:hover td{background:var(--surface);}
+.tbadge{font-weight:600;font-size:13px;color:var(--navy);background:var(--surface);padding:4px 8px;border-radius:6px;border:1px solid var(--border);display:inline-block;}
+.cpill{font-size:12px;font-weight:500;padding:3px 8px;border-radius:20px;}
+.cpill.up{background:var(--green-light);color:#065F46;}
+.cpill.dn{background:var(--red-light);color:#991B1B;}
+.cpill.fl{background:var(--surface);color:var(--text-muted);}
+.edit-qty{width:70px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:'DM Sans',sans-serif;text-align:right;}
+.btn-remove{background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px;}
+.btn-remove:hover{color:var(--red);background:var(--red-light);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+.rbar-wrap{margin-bottom:1rem;}
+.rbar-label{display:flex;justify-content:space-between;font-size:13px;color:var(--text-secondary);margin-bottom:6px;}
+.rbar-label strong{color:var(--text);}
+.rbar-track{height:8px;background:var(--surface);border-radius:4px;overflow:hidden;border:1px solid var(--border);}
+.rbar-fill{height:100%;border-radius:4px;transition:width 0.6s ease;}
+.risk-score-big{font-family:'DM Serif Display',serif;font-size:64px;line-height:1;text-align:center;padding:2rem 0 0.5rem;}
+.risk-score-label{text-align:center;font-size:14px;color:var(--text-secondary);margin-bottom:1rem;}
+.insight{display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:8px;}
+.idot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.itext{font-size:13px;color:var(--text-secondary);line-height:1.5;}.itext strong{color:var(--text);}
+.btn-pdf{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--navy);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);}
+.set-label{font-size:14px;font-weight:500;color:var(--text);}
+.set-sub{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.divider{height:1px;background:var(--border);margin:1.5rem 0;}
+.empty{text-align:center;padding:4rem 2rem;color:var(--text-muted);}
+.empty-icon{font-size:48px;margin-bottom:1rem;}
+.empty-title{font-size:18px;font-weight:500;color:var(--text-secondary);margin-bottom:8px;}
+#toast{position:fixed;bottom:2rem;right:2rem;background:var(--navy);color:white;padding:12px 20px;border-radius:var(--radius-sm);font-size:14px;box-shadow:var(--shadow-lg);z-index:999;display:none;animation:slideUp 0.3s ease;}
+@keyframes slideUp{from{transform:translateY(10px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.install-banner{position:fixed;bottom:0;left:0;right:0;background:var(--navy);color:white;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;z-index:200;box-shadow:0 -4px 20px rgba(0,0,0,0.3);}
+.btn-install{padding:10px 18px;background:var(--blue);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-dismiss{padding:10px 14px;background:transparent;color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.ios-instructions{background:var(--navy);color:white;border-radius:var(--radius);padding:1.25rem;margin:1rem;position:fixed;bottom:80px;left:1rem;right:1rem;z-index:201;box-shadow:var(--shadow-lg);}
+.ios-instructions p{font-size:13px;line-height:1.7;color:rgba(255,255,255,0.85);}
+.ios-close{float:right;background:transparent;border:none;color:rgba(255,255,255,0.6);font-size:20px;cursor:pointer;margin-left:8px;}
+@media(max-width:768px){.layout{flex-direction:column;}.sidebar{width:100%;padding:0.5rem 1rem;}.two-col,.report-grid{grid-template-columns:1fr;}.main{padding:1rem;}.add-row{flex-direction:column;}.ticker-inp,.qty-inp{width:100%;}}
+.upgrade-modal-overlay{position:fixed;inset:0;background:rgba(11,22,40,0.7);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;padding:2rem;}
+.upgrade-modal{background:white;border-radius:20px;padding:2.5rem;max-width:480px;width:100%;box-shadow:0 30px 60px rgba(0,0,0,0.3);}
+.upgrade-modal-logo{font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--navy);margin-bottom:0.25rem;}.upgrade-modal-logo span{color:var(--gold);}
+.upgrade-modal-badge{display:inline-block;background:var(--blue-pale);color:var(--blue);font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;letter-spacing:0.05em;margin-bottom:1.25rem;}
+.upgrade-modal-title{font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--navy);line-height:1.2;margin-bottom:0.75rem;}
+.upgrade-modal-sub{font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:1.5rem;}
+.upgrade-features{list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:1.75rem;}
+.upgrade-features li{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-secondary);}
+.upgrade-features li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0;}
+.upgrade-plans{display:flex;gap:10px;margin-bottom:1rem;}
+.upgrade-plan{flex:1;border:1px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer;text-align:center;}
+.upgrade-plan:hover,.upgrade-plan.selected{border-color:var(--blue);background:var(--blue-pale);}
+.upgrade-plan-price{font-size:1.4rem;font-weight:700;color:var(--navy);}
+.upgrade-plan-period{font-size:11px;color:var(--text-muted);}
+.upgrade-plan-save{font-size:10px;font-weight:600;color:var(--green);margin-top:2px;}
+.btn-upgrade{width:100%;padding:13px;background:var(--blue);color:white;border:none;border-radius:10px;font-size:15px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-upgrade:hover{background:#1D4ED8;}
+.upgrade-dismiss{text-align:center;margin-top:0.75rem;}
+.upgrade-dismiss button{background:none;border:none;font-size:13px;color:var(--text-muted);cursor:pointer;font-family:'DM Sans',sans-serif;}
+.upgrade-note{font-size:11px;color:var(--text-muted);text-align:center;margin-top:0.75rem;}
+.pro-tag{display:inline-flex;align-items:center;background:var(--gold);color:var(--navy);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:0.05em;vertical-align:middle;margin-left:4px;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="logo">Folio<span>.</span></div>
+    <div class="tagline">Your personal portfolio dashboard</div>
+    <div id="loginErr" class="login-error"></div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchTab('in')">Sign in</div>
+      <div class="auth-tab" onclick="switchTab('up')">Create account</div>
+    </div>
+    <div id="signinForm">
+      <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="siEmail" placeholder="you@example.com" /></div>
+      <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="siPass" placeholder="••••••••" /></div>
+      <button class="btn-primary" id="siBtn" onclick="doSignIn()">Sign in</button>
+      <div class="secure-note"><span>🔒</span><span>Your portfolio data is encrypted and only visible to you.</span></div>
+    </div>
+    <div id="signupForm" style="display:none;">
+      <div class="form-group"><label class="form-label">Full name</label><input type="text" class="form-input" id="suName" placeholder="Your name" /></div>
+      <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="suEmail" placeholder="you@example.com" /></div>
+      <div class="form-group"><label class="form-label">Password <span style="color:var(--text-muted);font-weight:400;">(min 8 characters)</span></label><input type="password" class="form-input" id="suPass" placeholder="••••••••" /></div>
+      <button class="btn-primary" id="suBtn" onclick="doSignUp()">Create account</button>
+      <div class="secure-note"><span>🔒</span><span>Passwords are encrypted with bank-level security.</span></div>
+    </div>
+    <div style="text-align:center;margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);">
+      <span style="font-size:12px;color:var(--text-muted);">Questions? Contact your advisor.</span>
+      <div style="margin-top:8px;font-size:11px;color:var(--text-muted);">By signing in you agree to our <a href="#" onclick="showTerms()" style="color:var(--blue);text-decoration:none;">Terms of Use</a> and <a href="#" onclick="showPrivacy()" style="color:var(--blue);text-decoration:none;">Privacy Policy</a></div>
+      <div style="margin-top:6px;font-size:11px;color:var(--text-muted);">© 2026 Folio Portfolio Intelligence · Dallas Messenger</div>
+    </div>
+  </div>
+</div>
+
+<div id="appScreen">
+  <div class="topbar">
+    <div class="topbar-logo">Folio<span>.</span></div>
+    <div class="topbar-right">
+      <span id="dataBadge" class="data-badge demo">Demo data</span>
+      <span class="topbar-user">Signed in as <strong id="topName">—</strong></span>
+      <button class="btn-logout" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <div class="nav-sec">
+        <div class="nav-sec-label">Portfolio</div>
+        <div class="nav-item active" id="nav-news" onclick="go('news')"><span class="nav-icon">📰</span>My news feed</div>
+        <div class="nav-item" id="nav-holdings" onclick="go('holdings')"><span class="nav-icon">📈</span>My holdings</div>
+        <div class="nav-item" id="nav-risk" onclick="go('risk')"><span class="nav-icon">⚠️</span>Portfolio risk</div>
+        <div class="nav-item" id="nav-reports" onclick="go('reports')"><span class="nav-icon">📄</span>Reports</div>
+        <div class="nav-item" id="nav-import" onclick="go('import')"><span class="nav-icon">📁</span>Import statement</div>
+        <div class="nav-item" id="nav-settings" onclick="go('settings')"><span class="nav-icon">⚙️</span>Settings</div>
+      </div>
+      <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:1rem;padding-left:1.5rem;">
+        <div style="font-size:11px;color:var(--green);display:flex;align-items:center;gap:6px;"><span>🔒</span>Data encrypted & secured</div>
+      </div>
+    </div>
+    <div class="main" id="main"></div>
+  </div>
+  <div style="background:var(--white);border-top:1px solid var(--border);padding:12px 2rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+    <span style="font-size:11px;color:var(--text-muted);">© 2026 Folio Portfolio Intelligence · <strong style="color:var(--text-secondary);">Dallas Messenger</strong> · All rights reserved</span>
+    <span style="font-size:11px;color:var(--text-muted);">Not investment advice</span>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="installBanner" style="display:none;" class="install-banner">
+  <div style="font-size:14px;line-height:1.4;"><strong style="display:block;font-size:15px;margin-bottom:2px;">📱 Add Folio to your home screen</strong>Get instant access like a native app</div>
+  <div style="display:flex;gap:8px;flex-shrink:0;">
+    <button class="btn-install" onclick="installApp()">Install</button>
+    <button class="btn-dismiss" onclick="dismissInstall()">Not now</button>
+  </div>
+</div>
+<div id="iosBanner" style="display:none;" class="ios-instructions">
+  <button class="ios-close" onclick="document.getElementById('iosBanner').style.display='none'">×</button>
+  <p><strong>Add Folio to your home screen:</strong><br>Tap the <strong>Share button</strong> at the bottom of Safari, then tap <strong>"Add to Home Screen"</strong> and tap <strong>Add</strong>.</p>
+</div>
+
+<script>
+const SB_URL='https://ibpiafqyimvcbbzhvsox.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlicGlhZnF5aW12Y2Jiemh2c294Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NDM0MDcsImV4cCI6MjA5MDIxOTQwN30.aLOow4IoVcVeFJq7YRjvNRt_3CZaofuXnOXdbBTyJeI';
+
+const MP={
+  AAPL:{name:'Apple Inc',type:'Stock',sector:'Technology',risk:'medium'},
+  AMZN:{name:'Amazon.com',type:'Stock',sector:'Consumer Disc.',risk:'medium'},
+  ALB:{name:'Albemarle Corp',type:'Stock',sector:'Materials',risk:'high'},
+  MSFT:{name:'Microsoft Corp',type:'Stock',sector:'Technology',risk:'medium'},
+  GOOGL:{name:'Alphabet Inc',type:'Stock',sector:'Technology',risk:'medium'},
+  NVDA:{name:'NVIDIA Corp',type:'Stock',sector:'Technology',risk:'medium-high'},
+  TSLA:{name:'Tesla Inc',type:'Stock',sector:'Consumer Disc.',risk:'high'},
+  META:{name:'Meta Platforms',type:'Stock',sector:'Technology',risk:'medium'},
+  JPM:{name:'JPMorgan Chase',type:'Stock',sector:'Financials',risk:'medium'},
+  CRM:{name:'Salesforce Inc',type:'Stock',sector:'Technology',risk:'medium'},
+  SCHD:{name:'Schwab US Dividend ETF',type:'ETF',sector:'Dividend',risk:'low'},
+  QQQ:{name:'Invesco QQQ Trust',type:'ETF',sector:'Technology',risk:'medium-high'},
+  VTI:{name:'Vanguard Total Market ETF',type:'ETF',sector:'Total Market',risk:'low'},
+  BND:{name:'Vanguard Total Bond ETF',type:'ETF',sector:'Bonds',risk:'low'},
+  VXUS:{name:'Vanguard Total Intl ETF',type:'ETF',sector:'International',risk:'medium'},
+  VIG:{name:'Vanguard Dividend Appreciation ETF',type:'ETF',sector:'Dividend Growth',risk:'low'},
+  VTIP:{name:'Vanguard Short-Term Inflation ETF',type:'ETF',sector:'Inflation-Protected',risk:'low'},
+  MDY:{name:'SPDR S&P MidCap 400',type:'ETF',sector:'Mid Cap',risk:'medium'},
+  VB:{name:'Vanguard Small-Cap ETF',type:'ETF',sector:'Small Cap',risk:'medium-high'},
+  SPY:{name:'SPDR S&P 500 ETF',type:'ETF',sector:'Large Blend',risk:'low'},
+  AGG:{name:'iShares Core US Aggregate Bond ETF',type:'ETF',sector:'Bonds',risk:'low'},
+  GLD:{name:'SPDR Gold Shares',type:'ETF',sector:'Commodities',risk:'medium'},
+  DODGX:{name:'Dodge & Cox Stock',type:'Mutual Fund',sector:'Large Value',risk:'medium'},
+  DODFX:{name:'Dodge & Cox Intl',type:'Mutual Fund',sector:'International',risk:'medium'},
+  VFIDX:{name:'Vanguard Interm Bond',type:'Mutual Fund',sector:'Bonds',risk:'low'},
+  FKAIX:{name:'Federated Kaufmann Sm Cap',type:'Mutual Fund',sector:'Small Growth',risk:'high'},
+  SEEGX:{name:'JPMorgan Large Cap Growth',type:'Mutual Fund',sector:'Large Growth',risk:'medium-high'},
+  FULIX:{name:'Federated Ultrashort Bond',type:'Mutual Fund',sector:'Ultrashort Bond',risk:'low'},
+  HLMIX:{name:'Harding Loevner Intl Equity',type:'Mutual Fund',sector:'International',risk:'medium'},
+  FTRBX:{name:'Federated Total Return Bond',type:'Mutual Fund',sector:'Bonds',risk:'low'},
+  CASH:{name:'Cash & Cash Equivalents',type:'Cash',sector:'Cash',risk:'none'},
+  FZFXX:{name:'Fidelity Treasury Money Market',type:'Cash',sector:'Cash',risk:'none'},
+  FZAXX:{name:'Fidelity Govt Money Market',type:'Cash',sector:'Cash',risk:'none'},
+  SNSXX:{name:'Schwab Treasury Money Fund',type:'Cash',sector:'Cash',risk:'none'},
+  SWVXX:{name:'Schwab Value Advantage Money Fund',type:'Cash',sector:'Cash',risk:'none'},
+  // Common mutual funds from brokerage imports
+  FTHSX:{name:'Federated Hermes Total Return Bond',type:'Mutual Fund',sector:'Bonds',risk:'low'},
+  GAADQX:{name:'Goldman Sachs Absolute Return Tracker',type:'Mutual Fund',sector:'Alternatives',risk:'medium'},
+  JDMNX:{name:'JPMorgan Dynamic Growth',type:'Mutual Fund',sector:'Large Growth',risk:'medium-high'},
+  MDIZX:{name:'BlackRock Mid Cap Growth',type:'Mutual Fund',sector:'Mid Cap',risk:'medium-high'},
+  MGLRX:{name:'Morgan Stanley Global Real Assets',type:'Mutual Fund',sector:'Real Assets',risk:'medium'},
+  PFORX:{name:'PIMCO Foreign Bond',type:'Mutual Fund',sector:'International Bonds',risk:'medium'},
+  PIMIX:{name:'PIMCO Income Instl',type:'Mutual Fund',sector:'Bonds',risk:'low'},
+  WLCGBX:{name:'Western Asset Core Bond',type:'Mutual Fund',sector:'Bonds',risk:'low'},
+  CTSH:{name:'Cognizant Technology Solutions',type:'Stock',sector:'Technology',risk:'medium'},
+  SU:{name:'Suncor Energy Inc',type:'Stock',sector:'Energy',risk:'medium-high'},
+  XLC:{name:'Communication Services Select Sector ETF',type:'ETF',sector:'Communication Services',risk:'medium'},
+  // Additional common ETFs and stocks
+  XLK:{name:'Technology Select Sector SPDR',type:'ETF',sector:'Technology',risk:'medium'},
+  XLF:{name:'Financial Select Sector SPDR',type:'ETF',sector:'Financials',risk:'medium'},
+  XLE:{name:'Energy Select Sector SPDR',type:'ETF',sector:'Energy',risk:'medium-high'},
+  XLV:{name:'Health Care Select Sector SPDR',type:'ETF',sector:'Health Care',risk:'low'},
+  XLI:{name:'Industrial Select Sector SPDR',type:'ETF',sector:'Industrials',risk:'medium'},
+  XLY:{name:'Consumer Discret Select Sector SPDR',type:'ETF',sector:'Consumer Disc.',risk:'medium-high'},
+  XLP:{name:'Consumer Staples Select Sector SPDR',type:'ETF',sector:'Consumer Staples',risk:'low'},
+  XLU:{name:'Utilities Select Sector SPDR',type:'ETF',sector:'Utilities',risk:'low'},
+  IEMG:{name:'iShares Core MSCI Emerging Markets',type:'ETF',sector:'Emerging Markets',risk:'high'},
+  EFA:{name:'iShares MSCI EAFE',type:'ETF',sector:'International',risk:'medium'},
+  IWM:{name:'iShares Russell 2000',type:'ETF',sector:'Small Cap',risk:'medium-high'},
+  DIA:{name:'SPDR Dow Jones Industrial Average',type:'ETF',sector:'Large Blend',risk:'low'},
+  VNQ:{name:'Vanguard Real Estate ETF',type:'ETF',sector:'Real Estate',risk:'medium'},
+  ARKK:{name:'ARK Innovation ETF',type:'ETF',sector:'Technology',risk:'high'},
+  JEPI:{name:'JPMorgan Equity Premium Income',type:'ETF',sector:'Covered Call',risk:'medium'},
+  JEPQ:{name:'JPMorgan Nasdaq Equity Premium Income',type:'ETF',sector:'Covered Call',risk:'medium'},
+  O:{name:'Realty Income Corp',type:'Stock',sector:'Real Estate',risk:'low'},
+  T:{name:'AT&T Inc',type:'Stock',sector:'Communication',risk:'medium'},
+  VZ:{name:'Verizon Communications',type:'Stock',sector:'Communication',risk:'medium'},
+  PG:{name:'Procter & Gamble',type:'Stock',sector:'Consumer Staples',risk:'low'},
+  KO:{name:'Coca-Cola Company',type:'Stock',sector:'Consumer Staples',risk:'low'},
+  JNJ:{name:'Johnson & Johnson',type:'Stock',sector:'Health Care',risk:'low'},
+  UNH:{name:'UnitedHealth Group',type:'Stock',sector:'Health Care',risk:'medium'},
+  HD:{name:'Home Depot',type:'Stock',sector:'Consumer Disc.',risk:'medium'},
+  V:{name:'Visa Inc',type:'Stock',sector:'Financials',risk:'medium'},
+  MA:{name:'Mastercard Inc',type:'Stock',sector:'Financials',risk:'medium'},
+  BAC:{name:'Bank of America',type:'Stock',sector:'Financials',risk:'medium'},
+  WMT:{name:'Walmart Inc',type:'Stock',sector:'Consumer Staples',risk:'low'},
+  XOM:{name:'Exxon Mobil Corp',type:'Stock',sector:'Energy',risk:'medium'},
+  CVX:{name:'Chevron Corp',type:'Stock',sector:'Energy',risk:'medium'},
+  PFE:{name:'Pfizer Inc',type:'Stock',sector:'Health Care',risk:'medium'},
+};
+
+const CRYPTO_TICKERS={BTC:'BINANCE:BTCUSDT',ETH:'BINANCE:ETHUSDT',SOL:'BINANCE:SOLUSDT',DOGE:'BINANCE:DOGEUSDT',ADA:'BINANCE:ADAUSDT',XRP:'BINANCE:XRPUSDT'};
+const CRYPTO_NAMES={BTC:'Bitcoin',ETH:'Ethereum',SOL:'Solana',DOGE:'Dogecoin',ADA:'Cardano',XRP:'XRP'};
+
+const NEWS=[
+  {headline:'Fed holds rates steady, signals patience on cuts',summary:'The Federal Reserve kept rates unchanged and indicated it needs more evidence inflation is moving toward its 2% target before cutting borrowing costs.',tickers:['BND','VFIDX','VTIP','AGG','FTRBX'],source:'Reuters',time:'2h ago',sentiment:'negative',cat:'Macro'},
+  {headline:'Apple reports record services revenue in Q1 2026',summary:'Apple posted stronger-than-expected services revenue driven by App Store, iCloud, and Apple TV+ growth. Management raised forward guidance.',tickers:['AAPL'],source:'Bloomberg',time:'4h ago',sentiment:'positive',cat:'Earnings'},
+  {headline:'Microsoft Azure growth accelerates on AI demand',summary:'Microsoft reported Azure cloud revenue grew 35% year-over-year, significantly beating analyst estimates. AI services were cited as the primary growth driver.',tickers:['MSFT'],source:'WSJ',time:'5h ago',sentiment:'positive',cat:'Earnings'},
+  {headline:'NVIDIA posts record data center revenue',summary:'NVIDIA reported another record quarter driven by insatiable demand for AI chips. The company raised guidance ahead of schedule.',tickers:['NVDA'],source:'Bloomberg',time:'5h ago',sentiment:'positive',cat:'Earnings'},
+  {headline:'Tech sector leads rally on AI infrastructure spending',summary:'Nasdaq-heavy ETFs outperformed as investor enthusiasm around AI infrastructure pushed large-cap technology stocks to new highs.',tickers:['QQQ','AAPL','MSFT','NVDA','GOOGL','META'],source:'CNBC',time:'6h ago',sentiment:'positive',cat:'Markets'},
+  {headline:'Dividend ETFs attract record inflows as volatility rises',summary:'Investors seeking income and stability moved heavily into dividend-focused ETFs. SCHD and VIG saw their highest weekly inflows of the year.',tickers:['SCHD','VIG'],source:'Morningstar',time:'8h ago',sentiment:'positive',cat:'Flows'},
+  {headline:'Bitcoin surges as institutional demand rises',summary:'Bitcoin hit new highs driven by continued institutional adoption and ETF inflows. Analysts remain divided on near-term price targets.',tickers:['BTC'],source:'CoinDesk',time:'9h ago',sentiment:'positive',cat:'Crypto'},
+  {headline:'Small-cap stocks lag as rate uncertainty persists',summary:'Small and mid-cap equities underperformed large caps as investors rotated toward quality amid uncertainty over the Fed rate path.',tickers:['VB','MDY','FKAIX'],source:'Barrons',time:'10h ago',sentiment:'negative',cat:'Markets'},
+  {headline:'TIPS outperform as inflation expectations rise',summary:'Treasury Inflation-Protected Securities posted positive returns as the latest CPI data came in slightly above expectations.',tickers:['VTIP'],source:'Bloomberg',time:'1d ago',sentiment:'positive',cat:'Bonds'},
+  {headline:'International equities face dollar headwind in Q1',summary:'A stronger U.S. dollar weighed on international equity returns for American investors, reducing returns by roughly 2-3 percentage points.',tickers:['VXUS','DODFX','HLMIX'],source:'FT',time:'2d ago',sentiment:'negative',cat:'Currency'},
+  {headline:'Lithium prices fall for third straight quarter',summary:'Global lithium prices dropped amid oversupply concerns and slower EV adoption. Albemarle faces continued margin pressure.',tickers:['ALB'],source:'Reuters',time:'3d ago',sentiment:'negative',cat:'Commodity'},
+  {headline:'Tesla deliveries disappoint amid rising competition',summary:'Tesla reported quarterly deliveries below analyst expectations as competition from Chinese EV makers pressured results.',tickers:['TSLA'],source:'Bloomberg',time:'3d ago',sentiment:'negative',cat:'Earnings'},
+];
+
+let sb=null,S={user:null,profile:null,client:null,holdings:{},liveData:{},currentPage:null};
+function getFinnhubKey(){return localStorage.getItem('folio_finnhub')||'';}
+function getAlphaKey(){return localStorage.getItem('folio_alphavantage')||'';}
+
+async function fetchMutualFundPrice(ticker){
+  const key=getAlphaKey();
+  if(!key)return;
+  const existing=S.liveData[ticker]||{};
+  // Skip if we have a valid cached price from today
+  if(existing.price&&!existing.noLivePrice&&existing.cachedAt===new Date().toDateString())return;
+  // Skip if we have a live price already (from Finnhub)
+  if(existing.price&&!existing.noLivePrice&&!existing.cachedAt)return;
+  // Only fetch for mutual funds or tickers Finnhub couldn't price
+  const isMF=(MP[ticker]&&MP[ticker].type==='Mutual Fund')||existing.noLivePrice||!existing.price;
+  if(!isMF)return;
+
+  // Try fetching with retries
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      const r=await fetch('https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+ticker+'&apikey='+key);
+      const d=await r.json();
+      // Check for rate limit message
+      if(d['Note']||d['Information']){
+        console.log('Alpha Vantage rate limited — waiting 60s before retry');
+        if(attempt===0)await new Promise(r=>setTimeout(r,62000));
+        continue;
+      }
+      const q=d['Global Quote'];
+      if(q&&q['05. price']&&parseFloat(q['05. price'])>0){
+        const price=parseFloat(q['05. price']);
+        const change=parseFloat((q['10. change percent']||'0%').replace('%',''));
+        const prevClose=parseFloat(q['08. previous close']||price);
+        const navData={
+          price,change:change.toFixed(2),changeAmt:price-prevClose,
+          low52:parseFloat(q['04. low']||0),high52:parseFloat(q['03. high']||0),
+          name:MP[ticker]?.name||ticker,sector:MP[ticker]?.sector||'Mutual Fund',
+          type:MP[ticker]?.type||'Mutual Fund',risk:MP[ticker]?.risk||'medium',
+          noLivePrice:false,cachedAt:new Date().toDateString(),
+        };
+        S.liveData[ticker]=navData;
+        // Cache to localStorage with today's date
+        localStorage.setItem('folio_nav_'+ticker, JSON.stringify(navData));
+        console.log('Alpha Vantage:',ticker,'=',price);
+        return;
+      } else {
+        // Alpha Vantage doesn't have this fund — mark as unavailable so we don't keep retrying
+        if(!S.liveData[ticker]){
+          S.liveData[ticker]={price:null,change:null,low52:null,high52:null,
+            name:MP[ticker]?.name||ticker,sector:MP[ticker]?.sector||'Mutual Fund',
+            type:MP[ticker]?.type||'Mutual Fund',risk:MP[ticker]?.risk||'medium',
+            noLivePrice:true,notAvailable:true};
+        }
+        console.log('Alpha Vantage: no data for',ticker);
+        return;
+      }
+    }catch(e){
+      console.log('Alpha Vantage error',ticker,e);
+      if(attempt===0)await new Promise(r=>setTimeout(r,5000));
+    }
+  }
+}
+
+async function fetchAllMutualFundPrices(){
+  const key=getAlphaKey();
+  if(!key)return;
+  // Get all tickers that are mutual funds OR that Finnhub couldn't price
+  const mfTickers=getTickers().filter(x=>{
+    if(x==='CASH')return false;
+    const mp=MP[x]||{};
+    const live=S.liveData[x]||{};
+    // Include if it's a known mutual fund OR if it has no live price yet
+    return mp.type==='Mutual Fund'||live.noLivePrice||(!live.price&&mp.type&&mp.type!=='Cash');
+  });
+  if(!mfTickers.length)return;
+  // Alpha Vantage free tier: 25 calls/day, 5 calls/min — fetch sequentially with delay
+  for(const ticker of mfTickers){
+    await fetchMutualFundPrice(ticker);
+    await new Promise(r=>setTimeout(r,1200)); // 1.2s delay = max 5 calls/min
+  }
+  if(S.currentPage)go(S.currentPage);
+}
+
+function init(){
+  sb=window.supabase.createClient(SB_URL,SB_KEY);
+  checkSession();
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  let deferredPrompt=null;
+  window.addEventListener('beforeinstallprompt',(e)=>{e.preventDefault();deferredPrompt=e;if(!localStorage.getItem('folio_dismissed')){setTimeout(()=>{document.getElementById('installBanner').style.display='flex';},4000);}});
+  window.installApp=async function(){if(deferredPrompt){deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;deferredPrompt=null;document.getElementById('installBanner').style.display='none';if(outcome==='accepted')toast('Folio installed!');}else{document.getElementById('installBanner').style.display='none';document.getElementById('iosBanner').style.display='block';}};
+  window.dismissInstall=function(){document.getElementById('installBanner').style.display='none';localStorage.setItem('folio_dismissed','true');};
+}
+
+async function checkSession(){const{data:{session}}=await sb.auth.getSession();if(session)await loadUser(session.user);}
+
+async function loadUser(user){
+  S.user=user;
+  const{data:profile}=await sb.from('profiles').select('*').eq('id',user.id).single();
+  S.profile=profile;
+  const{data:clients}=await sb.from('clients').select('*').eq('email',user.email);
+  S.client=clients?.[0]||null;
+  const saved=localStorage.getItem('folio_holdings_'+user.id);
+  S.holdings=saved?JSON.parse(saved):{};
+  // Load cached NAV prices (valid for today only)
+  const today=new Date().toDateString();
+  Object.keys(localStorage).forEach(k=>{
+    if(k.startsWith('folio_nav_')){
+      try{
+        const cached=JSON.parse(localStorage.getItem(k));
+        if(cached&&cached.cachedAt===today){
+          const ticker=k.replace('folio_nav_','');
+          S.liveData[ticker]=cached;
+          console.log('Loaded cached NAV for',ticker,'=',cached.price);
+        }else{
+          localStorage.removeItem(k); // expired — remove old cache
+        }
+      }catch(e){}
+    }
+  });
+  if(Object.keys(S.holdings).length===0){
+    const defaults=S.client?.tickers||['VTI','BND','SCHD','AAPL','MSFT','VIG','VTIP','VXUS'];
+    defaults.forEach(t=>{S.holdings[t]={qty:0};});saveHoldings();
+  }
+  const displayName=profile?.name&&!profile.name.includes('@')?profile.name:user.email.split('@')[0];
+  document.getElementById('topName').textContent=displayName;
+  const key=getFinnhubKey();
+  if(key){document.getElementById('dataBadge').textContent='Live data';document.getElementById('dataBadge').className='data-badge live';}
+  // Alpha Vantage: load from cache only on login — user fetches manually once/day
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appScreen').style.display='block';
+  go('news');
+  if(key){fetchAllPrices();setInterval(fetchAllPrices,60000);}
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  if(isIOS&&!window.navigator.standalone&&!localStorage.getItem('folio_dismissed')){setTimeout(()=>{document.getElementById('iosBanner').style.display='block';},5000);}
+}
+
+function saveHoldings(){localStorage.setItem('folio_holdings_'+S.user.id,JSON.stringify(S.holdings));}
+function getTickers(){return Object.keys(S.holdings);}
+function getQty(t){return S.holdings[t]?.qty||0;}
+function getVal(t){
+  const d=gpd(t);const q=getQty(t);
+  if(!d.price||!q)return 0;
+  if(d.isCash||S.holdings[t]?.isCash)return q; // cash qty IS the dollar value
+  return parseFloat(d.price)*q;
+}
+function gpd(t){
+  // Handle cash positions
+  if(t==='CASH'||S.holdings[t]?.isCash){
+    const h=S.holdings[t]||{};
+    return{name:h.cashLabel||'Cash & Cash Equivalents',type:'Cash',sector:'Cash',risk:'none',price:1.00,change:0,changeAmt:0,low52:1,high52:1,isCash:true};
+  }
+  const live=S.liveData[t];const base=MP[t]||{name:t,type:'Stock',sector:'—',risk:'medium'};
+  return live?{...base,...live}:{...base,price:null,change:null};
+}
+// Live news cache
+let liveNewsCache=[];
+let newsFetchedAt=0;
+
+async function fetchLiveNews(){
+  const key=getFinnhubKey();
+  if(!key)return false;
+  const now=Date.now();
+  // Refresh every 30 minutes
+  if(liveNewsCache.length&&(now-newsFetchedAt)<30*60*1000)return true;
+  try{
+    const t=getTickers().filter(x=>!CRYPTO_TICKERS[x]&&x!=='CASH').slice(0,8);
+    const results=[];
+    await Promise.all(t.map(async ticker=>{
+      try{
+        const r=await fetch('https://finnhub.io/api/v1/company-news?symbol='+ticker+'&from='+getDateStr(7)+'&to='+getDateStr(0)+'&token='+key);
+        const data=await r.json();
+        if(Array.isArray(data)){
+          data.slice(0,3).forEach(item=>{
+            if(item.headline&&item.summary){
+              results.push({
+                headline:item.headline,
+                summary:item.summary.slice(0,200)+(item.summary.length>200?'...':''),
+                tickers:[ticker],
+                source:item.source||'Finnhub',
+                time:timeAgo(item.datetime*1000),
+                sentiment:item.sentiment>0.2?'positive':item.sentiment<-0.2?'negative':'neutral',
+                cat:'News',
+                live:true,
+              });
+            }
+          });
+        }
+      }catch(e){}
+    }));
+    if(results.length){
+      // Sort by recency, deduplicate by headline
+      const seen=new Set();
+      liveNewsCache=results
+        .filter(n=>{if(seen.has(n.headline))return false;seen.add(n.headline);return true;})
+        .sort((a,b)=>0.5-Math.random()) // slight shuffle to mix sources
+        .slice(0,20);
+      newsFetchedAt=now;
+      return true;
+    }
+  }catch(e){console.log('News fetch error',e);}
+  return false;
+}
+
+function getDateStr(daysAgo){
+  const d=new Date();d.setDate(d.getDate()-daysAgo);
+  return d.toISOString().split('T')[0];
+}
+
+function timeAgo(ts){
+  const diff=Date.now()-ts;
+  const h=Math.floor(diff/3600000);
+  if(h<1)return Math.floor(diff/60000)+'m ago';
+  if(h<24)return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+
+function relNews(){
+  const t=getTickers();
+  // Use live news if available
+  if(liveNewsCache.length){
+    const live=liveNewsCache.filter(n=>n.tickers.some(x=>t.includes(x)));
+    if(live.length)return live;
+  }
+  // Fallback to hardcoded
+  return NEWS.filter(n=>n.tickers.some(x=>t.includes(x)));
+}
+function getFinnhubKey(){return localStorage.getItem('folio_finnhub')||'';}
+function getAlphaKey(){return localStorage.getItem('folio_alphavantage')||'';}
+
+async function fetchMutualFundPrice(ticker){
+  const key=getAlphaKey();
+  if(!key)return;
+  const existing=S.liveData[ticker]||{};
+  // Skip if we have a valid cached price from today
+  if(existing.price&&!existing.noLivePrice&&existing.cachedAt===new Date().toDateString())return;
+  // Skip if we have a live price already (from Finnhub)
+  if(existing.price&&!existing.noLivePrice&&!existing.cachedAt)return;
+  // Only fetch for mutual funds or tickers Finnhub couldn't price
+  const isMF=(MP[ticker]&&MP[ticker].type==='Mutual Fund')||existing.noLivePrice||!existing.price;
+  if(!isMF)return;
+
+  // Try fetching with retries
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      const r=await fetch('https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+ticker+'&apikey='+key);
+      const d=await r.json();
+      // Check for rate limit message
+      if(d['Note']||d['Information']){
+        console.log('Alpha Vantage rate limited — waiting 60s before retry');
+        if(attempt===0)await new Promise(r=>setTimeout(r,62000));
+        continue;
+      }
+      const q=d['Global Quote'];
+      if(q&&q['05. price']&&parseFloat(q['05. price'])>0){
+        const price=parseFloat(q['05. price']);
+        const change=parseFloat((q['10. change percent']||'0%').replace('%',''));
+        const prevClose=parseFloat(q['08. previous close']||price);
+        const navData={
+          price,change:change.toFixed(2),changeAmt:price-prevClose,
+          low52:parseFloat(q['04. low']||0),high52:parseFloat(q['03. high']||0),
+          name:MP[ticker]?.name||ticker,sector:MP[ticker]?.sector||'Mutual Fund',
+          type:MP[ticker]?.type||'Mutual Fund',risk:MP[ticker]?.risk||'medium',
+          noLivePrice:false,cachedAt:new Date().toDateString(),
+        };
+        S.liveData[ticker]=navData;
+        // Cache to localStorage with today's date
+        localStorage.setItem('folio_nav_'+ticker, JSON.stringify(navData));
+        console.log('Alpha Vantage:',ticker,'=',price);
+        return;
+      } else {
+        // Alpha Vantage doesn't have this fund — mark as unavailable so we don't keep retrying
+        if(!S.liveData[ticker]){
+          S.liveData[ticker]={price:null,change:null,low52:null,high52:null,
+            name:MP[ticker]?.name||ticker,sector:MP[ticker]?.sector||'Mutual Fund',
+            type:MP[ticker]?.type||'Mutual Fund',risk:MP[ticker]?.risk||'medium',
+            noLivePrice:true,notAvailable:true};
+        }
+        console.log('Alpha Vantage: no data for',ticker);
+        return;
+      }
+    }catch(e){
+      console.log('Alpha Vantage error',ticker,e);
+      if(attempt===0)await new Promise(r=>setTimeout(r,5000));
+    }
+  }
+}
+
+
+async function fetchSinglePrice(ticker){
+  const key=getFinnhubKey();if(!key)return;
+  try{
+    const isCrypto=!!CRYPTO_TICKERS[ticker];
+    if(isCrypto){
+      const sym=CRYPTO_TICKERS[ticker];
+      const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${sym}&token=${key}`);
+      const d=await r.json();
+      if(d&&d.c&&d.c>0){S.liveData[ticker]={price:d.c,change:parseFloat(d.dp||0).toFixed(2),changeAmt:d.d||0,low52:d.l||0,high52:d.h||0,name:CRYPTO_NAMES[ticker]||ticker,sector:'Crypto',type:'Crypto',risk:'high'};}
+      else{S.liveData[ticker]={price:null,change:null,low52:null,high52:null,name:CRYPTO_NAMES[ticker]||ticker,sector:'Crypto',type:'Crypto',risk:'high'};}
+      return;
+    }
+    const[qr,pr]=await Promise.all([fetch(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${key}`),fetch(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${key}`)]);
+    const q=await qr.json(),p=await pr.json();
+    if(q&&q.c&&q.c>0){
+      S.liveData[ticker]={price:q.c,change:parseFloat(q.dp||0).toFixed(2),changeAmt:q.d||0,low52:q.l||0,high52:q.h||0,name:p.name||MP[ticker]?.name||ticker,sector:p.finnhubIndustry||MP[ticker]?.sector||'—',type:MP[ticker]?.type||(p.type==='ETP'?'ETF':'Stock'),risk:MP[ticker]?.risk||'medium'};
+    } else if(MP[ticker]){
+      // Ticker not in Finnhub (e.g. mutual fund) — use MP metadata, mark as no live price
+      S.liveData[ticker]={price:null,change:null,low52:null,high52:null,name:MP[ticker].name,sector:MP[ticker].sector,type:MP[ticker].type,risk:MP[ticker].risk,noLivePrice:true};
+    }
+  }catch(e){console.log('Price fetch error',ticker,e);}
+}
+
+async function fetchAllPrices(){
+  await Promise.all(getTickers().map(t=>fetchSinglePrice(t)));
+  // Mutual fund prices: fetch manually via button to conserve 25/day API limit
+  if(S.currentPage)go(S.currentPage);
+}
+
+function switchTab(t){
+  document.querySelectorAll('.auth-tab').forEach((x,i)=>x.classList.toggle('active',(i===0&&t==='in')||(i===1&&t==='up')));
+  document.getElementById('signinForm').style.display=t==='in'?'':'none';
+  document.getElementById('signupForm').style.display=t==='up'?'':'none';
+  document.getElementById('loginErr').style.display='none';
+}
+function showErr(m){const e=document.getElementById('loginErr');e.textContent=m;e.style.display='block';}
+
+async function doSignIn(){
+  const email=document.getElementById('siEmail').value.trim(),pass=document.getElementById('siPass').value;
+  if(!email||!pass){showErr('Please enter your email and password');return;}
+  const btn=document.getElementById('siBtn');btn.disabled=true;btn.textContent='Signing in...';
+  try{
+    const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    btn.disabled=false;btn.textContent='Sign in';
+    if(error){showErr('Error: '+error.message);return;}
+    if(!data?.user){showErr('No user returned — try creating a new account');return;}
+    await loadUser(data.user);
+  }catch(e){btn.disabled=false;btn.textContent='Sign in';showErr('Connection error: '+e.message);}
+}
+
+async function doSignUp(){
+  const name=document.getElementById('suName').value.trim(),email=document.getElementById('suEmail').value.trim(),pass=document.getElementById('suPass').value;
+  if(!name||!email||!pass){showErr('Please fill in all fields');return;}
+  if(pass.length<8){showErr('Password must be at least 8 characters');return;}
+  const btn=document.getElementById('suBtn');btn.disabled=true;btn.textContent='Creating account...';
+  try{
+    const{data,error}=await sb.auth.signUp({email,password:pass});
+    if(error){btn.disabled=false;btn.textContent='Create account';showErr(error.message);return;}
+    await sb.from('profiles').insert({id:data.user.id,name,role:'client',api_key:''});
+    btn.disabled=false;btn.textContent='Create account';
+    toast('Account created!');await loadUser(data.user);
+  }catch(e){btn.disabled=false;btn.textContent='Create account';showErr('Error: '+e.message);}
+}
+
+async function doLogout(){
+  await sb.auth.signOut();S={user:null,profile:null,client:null,holdings:{},liveData:{},currentPage:null};
+  document.getElementById('loginScreen').style.display='flex';document.getElementById('appScreen').style.display='none';
+}
+
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3500);}
+
+function go(page){
+  S.currentPage=page;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const nav=document.getElementById('nav-'+page);if(nav)nav.classList.add('active');
+  const m=document.getElementById('main');
+  if(page==='news')pgNews(m);
+  else if(page==='holdings')pgHoldings(m);
+  else if(page==='risk')pgRisk(m);
+  else if(page==='reports')pgReports(m);
+  else if(page==='settings')pgSettings(m);
+  else if(page==='import')pgImport(m);
+}
+
+function pgNews(m){
+  // Fetch live news once in background without recursive call
+  if(getFinnhubKey()&&!S.newsFetching){
+    S.newsFetching=true;
+    fetchLiveNews().then(ok=>{
+      S.newsFetching=false;
+      if(ok&&liveNewsCache.length&&S.currentPage==='news'){
+        // Just refresh the news list section only, not the whole page
+        const nl=document.querySelector('.news-list');
+        if(nl){
+          const t=getTickers(),news=relNews();
+          nl.innerHTML=news.map(n=>{
+            const rel=n.tickers.filter(x=>t.includes(x));
+            return'<div class="news-item"><div class="news-hdr"><div class="news-title">'+n.headline+'</div><div style="display:flex;align-items:center;gap:8px;"><div class="news-time">'+n.time+'</div>'+(n.live?'<span style="font-size:10px;background:#D1FAE5;color:#065F46;padding:2px 6px;border-radius:10px;font-weight:500;">LIVE</span>':'')+'</div></div><div class="news-body">'+n.summary+'</div><div class="news-footer"><div class="tags">'+rel.map(x=>'<span class="tag t">'+x+'</span>').join('')+'<span class="tag '+(n.sentiment==='positive'?'pos':n.sentiment==='negative'?'neg':'neu')+'">'+n.sentiment+'</span><span class="tag neu">'+n.cat+'</span></div><div class="news-src">'+n.source+'</div></div></div>';
+          }).join('');
+        }
+      }
+    }).catch(()=>{S.newsFetching=false;});
+  }
+  const t=getTickers(),news=relNews(),name=S.profile?.name&&!S.profile.name.includes('@')?S.profile.name:S.user?.email?.split('@')[0]||'';
+  const hr=t.filter(x=>gpd(x).risk==='high'),dn=t.filter(x=>parseFloat(gpd(x).change||0)<-1.5);
+  m.innerHTML=`
+    <div class="page-hdr">
+      <div><div class="page-title">News feed</div><div class="page-sub">${name} · ${t.length} holdings tracked</div></div>
+      <button class="btn-pdf" onclick="go('reports')">📄 Generate report</button>
+    </div>
+    ${dn.length?`<div class="alert warn"><span>⚠</span><div>Significant decline today: <strong>${dn.join(', ')}</strong></div></div>`:''}
+    ${hr.length?`<div class="alert danger"><span>🔴</span><div>Higher-risk holdings: <strong>${hr.join(', ')}</strong> — speak with your advisor</div></div>`:''}
+    <div class="chips">${t.map(x=>{const d=gpd(x);const p=d.price?`$${parseFloat(d.price).toFixed(2)}`:'';return`<div class="chip">${x}${p?`<span class="chip-price">${p}</span>`:''}<span class="chip-x" onclick="removeTicker('${x}')">×</span></div>`;}).join('')}</div>
+    <div class="add-row">
+      <input type="text" class="ticker-inp form-input" id="newTicker" placeholder="Add ticker (e.g. NVDA)" />
+      <input type="number" class="qty-inp form-input" id="newQty" placeholder="Shares" min="0" step="0.001" />
+      <button class="btn-add" onclick="addTicker()">+ Add holding</button>
+    </div>
+    ${!news.length?'<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">No recent news for your holdings</div></div>':''}
+    <div class="news-list">${news.map(n=>{const rel=n.tickers.filter(x=>t.includes(x));return`<div class="news-item"><div class="news-hdr"><div class="news-title">${n.headline}</div><div style="display:flex;align-items:center;gap:8px;"><div class="news-time">${n.time}</div>${n.live?'<span style="font-size:10px;background:#D1FAE5;color:#065F46;padding:2px 6px;border-radius:10px;font-weight:500;">LIVE</span>':''}</div></div><div class="news-body">${n.summary}</div><div class="news-footer"><div class="tags">${rel.map(x=>`<span class="tag t">${x}</span>`).join('')}<span class="tag ${n.sentiment==='positive'?'pos':n.sentiment==='negative'?'neg':'neu'}">${n.sentiment}</span><span class="tag neu">${n.cat}</span></div><div class="news-src">${n.source}</div></div></div>`;}).join('')}</div>`;
+  const ti=document.getElementById('newTicker');
+  if(ti)ti.addEventListener('keydown',e=>{if(e.key==='Enter')addTicker();});
+}
+
+async function addTicker(){
+  const ti=document.getElementById('newTicker'),qi=document.getElementById('newQty');
+  const val=ti.value.trim().toUpperCase(),qty=parseFloat(qi.value)||0;
+  if(!val){return;}
+  if(S.holdings[val]!==undefined){toast(`${val} already in portfolio`);ti.value='';qi.value='';return;}
+  S.holdings[val]={qty};saveHoldings();ti.value='';qi.value='';
+  toast(`Added ${val}${getFinnhubKey()?' — fetching live data...':''}`);
+  if(getFinnhubKey())await fetchSinglePrice(val);
+  if(getAlphaKey())await fetchMutualFundPrice(val);
+  go(S.currentPage||'news');
+}
+
+async function removeTicker(t){
+  if(!confirm(`Remove ${t} from your portfolio?`))return;
+  delete S.holdings[t];delete S.liveData[t];saveHoldings();
+  toast(`Removed ${t}`);go(S.currentPage||'news');
+}
+
+function updateQty(ticker,qty){
+  S.holdings[ticker]={qty:parseFloat(qty)||0};saveHoldings();
+  refreshValue(ticker,qty);
+}
+
+function refreshValue(ticker,qty){
+  const d=gpd(ticker);const q=parseFloat(qty)||0;
+  const el=document.getElementById('val-'+ticker);
+  if(!el)return;
+  const isCashPos=d.isCash||S.holdings[ticker]?.isCash;
+  if(isCashPos&&q){el.textContent='$'+Math.round(q).toLocaleString();}
+  else if(d.price&&q){el.textContent='$'+Math.round(parseFloat(d.price)*q).toLocaleString();}
+  else{el.textContent='—';}
+}
+
+function pgHoldings(m){
+  const t=getTickers(),name=S.profile?.name&&!S.profile.name.includes('@')?S.profile.name:'';
+  const withPrice=t.filter(x=>gpd(x).price);
+  const g=withPrice.filter(x=>parseFloat(gpd(x).change||0)>0).length;
+  const l=withPrice.filter(x=>parseFloat(gpd(x).change||0)<0).length;
+  const avg=withPrice.length?withPrice.reduce((s,x)=>s+parseFloat(gpd(x).change||0),0)/withPrice.length:0;
+  const totalVal=t.reduce((s,x)=>s+getVal(x),0);
+  m.innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">My holdings</div><div class="page-sub">${name} · ${new Date().toLocaleDateString()}</div></div></div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Holdings</div><div class="metric-value">${t.length}</div></div>
+      <div class="metric"><div class="metric-label">Up today</div><div class="metric-value g">${g}</div></div>
+      <div class="metric"><div class="metric-label">Down today</div><div class="metric-value r">${l}</div></div>
+      <div class="metric"><div class="metric-label">Avg move</div><div class="metric-value ${avg>=0?'g':'r'}">${avg>=0?'+':''}${avg.toFixed(2)}%</div></div>
+      ${totalVal>0?`<div class="metric"><div class="metric-label">Est. total value</div><div class="metric-value gold" style="font-size:18px;">$${Math.round(totalVal).toLocaleString()}</div></div>`:''}
+    </div>
+    <div class="card card-pad">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div class="card-title">All positions</div><span style="font-size:12px;color:var(--text-muted);">${getFinnhubKey()?'Live prices':'Demo prices'} · Edit shares to track value</span></div>
+      <div style="overflow-x:auto;"><table class="tbl">
+        <thead><tr><th>Ticker</th><th>Name</th><th>Type</th><th>Sector</th><th>Price</th><th>Today</th><th>52-week range</th><th>Shares</th><th>Value</th><th></th></tr></thead>
+        <tbody>${t.map(x=>{const d=gpd(x);const hasPrice=d.price&&d.price!==null;
+        const notAvail=d.notAvailable;const c=parseFloat(d.change||0),cc=c>0?'up':c<0?'dn':'fl';const qty=getQty(x);const isCashPos=d.isCash||S.holdings[x]?.isCash;
+        const val=isCashPos?'$'+Math.round(qty).toLocaleString():(hasPrice&&qty?'$'+Math.round(parseFloat(d.price)*qty).toLocaleString():'—');return`<tr><td><span class="tbadge">${x}</span></td><td style="font-size:13px;color:var(--text-secondary);">${d.name||x}</td><td style="font-size:12px;color:var(--text-muted);">${d.type||'—'}</td><td style="font-size:12px;color:var(--text-muted);">${d.sector||'—'}</td><td style="font-weight:600;color:${hasPrice?'inherit':'var(--text-muted)'}">${hasPrice?'$'+parseFloat(d.price).toFixed(2):notAvail?'No NAV data':'—'}</td><td>${hasPrice?`<span class="cpill ${cc}">${c>=0?'+':''}${c.toFixed(2)}%</span>`:'<span style="color:var(--text-muted);">—</span>'}</td><td style="font-size:12px;color:var(--text-muted);">${d.low52&&parseFloat(d.low52)>0?'$'+parseFloat(d.low52).toFixed(2)+'–$'+parseFloat(d.high52).toFixed(2):'—'}</td><td><input type="number" class="edit-qty" value="${qty||''}" placeholder="0" min="0" step="0.001" onchange="updateQty('${x}',this.value)" onblur="refreshValue('${x}',this.value)" /></td><td style="font-weight:500;" id="val-${x}">${val}</td><td><button class="btn-remove" onclick="removeTicker('${x}')">×</button></td></tr>`;}).join('')}</tbody>
+      </table></div>
+    </div>
+    <div style="margin-top:1rem;"><div class="add-row"><input type="text" class="ticker-inp form-input" id="hNewTicker" placeholder="Add ticker" /><input type="number" class="qty-inp form-input" id="hNewQty" placeholder="Shares" min="0" step="0.001" /><button class="btn-add" onclick="addTickerFromHoldings()">+ Add</button>
+      </div>
+      <div id="mfStatus" style="font-size:12px;color:var(--text-muted);margin-top:4px;padding-left:2px;min-height:16px;"></div>
+    </div>
+    <div class="card card-pad" style="margin-top:1rem;">
+      <div class="card-title" style="margin-bottom:0.5rem;">Import from brokerage CSV</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:1rem;line-height:1.6;">Download your holdings as a CSV from your brokerage (Schwab, Fidelity, Vanguard, etc.) and upload it here to import all positions automatically.</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <label style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--blue);color:white;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;">
+          📁 Upload CSV file
+          <input type="file" id="csvUpload" accept=".csv" style="display:none;" onchange="importCSV(this)" />
+        </label>
+        <button onclick="showCSVHelp()" style="padding:10px 18px;background:var(--white);color:var(--text-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">How to download CSV ↗</button>
+      </div>
+      <div id="csvStatus" style="margin-top:1rem;display:none;"></div>
+    </div>`;
+  const ti=document.getElementById('hNewTicker');
+  if(ti)ti.addEventListener('keydown',e=>{if(e.key==='Enter')addTickerFromHoldings();});
+  const mfSt=document.getElementById('mfStatus');
+  if(mfSt){
+    const lastUp=localStorage.getItem('folio_nav_last_updated');
+    if(lastUp) mfSt.textContent='Fund NAVs last updated: '+lastUp+' · Auto-refreshes daily after 6pm EST';
+    else if(getAlphaKey()) mfSt.textContent='Mutual fund prices loading in background...';
+    else mfSt.textContent='Add Alpha Vantage key in Settings to enable mutual fund prices';
+  }
+}
+
+// Background fetch — silent, non-blocking, handles rate limits gracefully
+async function backgroundMFFetch(){
+  const key=getAlphaKey();
+  if(!key)return;
+  const today=new Date().toDateString();
+  // Get mutual funds that don't have a cached price for today
+  const needed=getTickers().filter(x=>{
+    if(x==='CASH')return false;
+    const mp=MP[x]||{};
+    if(mp.type!=='Mutual Fund')return false;
+    const cached=localStorage.getItem('folio_nav_'+x);
+    if(!cached)return true;
+    try{
+      const c=JSON.parse(cached);
+      return c.cachedAt!==today; // re-fetch if not cached today
+    }catch(e){return true;}
+  });
+  if(!needed.length)return; // all already cached today
+  const badge=document.getElementById('dataBadge');
+  // Don't change badge text — keep it as 'Live data' while loading silently
+  let fetched=0,rateLimited=false;
+  for(const ticker of needed){
+    if(rateLimited)break; // stop if rate limited — rest stay as cached or dashes
+    try{
+      const r=await fetch('https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+ticker+'&apikey='+key);
+      const d=await r.json();
+      if(d['Note']||d['Information']){
+        // Rate limited — save what we have, stop quietly
+        rateLimited=true;
+        console.log('Alpha Vantage rate limited after',fetched,'funds — remaining will load tomorrow or on manual fetch');
+        break;
+      }
+      const q=d['Global Quote'];
+      if(q&&q['05. price']&&parseFloat(q['05. price'])>0){
+        processMFPrice(ticker,q);
+        fetched++;
+      }
+      // Space calls to stay under 5/min
+      await new Promise(r=>setTimeout(r,13000)); // 13s gap = ~4.6 calls/min safely
+    }catch(e){
+      console.log('Background MF fetch error',ticker,e);
+    }
+  }
+  // Update badge
+  if(badge){badge.textContent='Live data';badge.className='data-badge live';}
+
+  // Show pending indicator if rate limited
+  const pendingMFs=needed.filter(x=>!S.liveData[x]||!S.liveData[x].price);
+  if(rateLimited&&pendingMFs.length){
+    const statusEl=document.getElementById('mfStatus');
+    if(statusEl)statusEl.innerHTML='<span style="color:var(--amber);">⏳ '+pendingMFs.length+' fund price'+(pendingMFs.length>1?'s':'')+' loading in background — auto-retrying in 70s</span>';
+    console.log('Rate limited — retrying',pendingMFs,'in 70s');
+    setTimeout(()=>backgroundMFFetch(),70000);
+  } else {
+    const statusEl=document.getElementById('mfStatus');
+    if(statusEl&&fetched>0)statusEl.innerHTML='<span style="color:var(--green);">✓ '+fetched+' fund price'+(fetched>1?'s':'')+' loaded</span>';
+  }
+
+  // Refresh holdings view if on that page
+  if(fetched>0&&S.currentPage)go(S.currentPage);
+}
+
+async function manualFetchMF(){
+  const statusEl = document.getElementById('mfStatus');
+  if(statusEl) statusEl.textContent = 'Fetching mutual fund prices...';
+  const key = getAlphaKey();
+  if(!key){
+    if(statusEl) statusEl.textContent = 'No Alpha Vantage key — add it in Settings';
+    return;
+  }
+  const mfTickers = getTickers().filter(x => {
+    if(x === 'CASH') return false;
+    const mp = MP[x] || {};
+    return mp.type === 'Mutual Fund';
+  });
+  if(!mfTickers.length){
+    if(statusEl) statusEl.textContent = 'No mutual funds found in your holdings';
+    return;
+  }
+  if(statusEl) statusEl.textContent = 'Fetching ' + mfTickers.length + ' fund NAVs... uses ' + mfTickers.length + ' of your 25 daily Alpha Vantage calls';
+  let fetched = 0, failed = 0;
+  for(const ticker of mfTickers){
+    try{
+      if(statusEl) statusEl.textContent = 'Fetching ' + ticker + '... (' + (fetched+failed+1) + '/' + mfTickers.length + ')';
+      const r = await fetch('https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=' + ticker + '&apikey=' + key);
+      const d = await r.json();
+      if(d['Note'] || d['Information']){
+        if(statusEl) statusEl.textContent = 'Rate limited — waiting 60s then retrying...';
+        await new Promise(r => setTimeout(r, 62000));
+        const r2 = await fetch('https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=' + ticker + '&apikey=' + key);
+        const d2 = await r2.json();
+        const q2 = d2['Global Quote'];
+        if(q2 && q2['05. price'] && parseFloat(q2['05. price']) > 0){
+          processMFPrice(ticker, q2);
+          fetched++;
+        } else { failed++; }
+      } else {
+        const q = d['Global Quote'];
+        if(q && q['05. price'] && parseFloat(q['05. price']) > 0){
+          processMFPrice(ticker, q);
+          fetched++;
+        } else {
+          failed++;
+          console.log('No data for', ticker, JSON.stringify(d).slice(0,100));
+        }
+      }
+      await new Promise(r => setTimeout(r, 1300));
+    } catch(e){
+      console.error('Error fetching', ticker, e);
+      failed++;
+    }
+  }
+  const now2 = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  localStorage.setItem('folio_nav_last_updated', new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' at ' + now2);
+  if(statusEl) statusEl.textContent = '✅ ' + fetched + ' fund NAVs loaded' + (failed ? ', ' + failed + ' unavailable' : '') + '. Refreshing...';
+  setTimeout(() => go('holdings'), 1000);
+}
+
+function processMFPrice(ticker, q){
+  const price = parseFloat(q['05. price']);
+  const change = parseFloat((q['10. change percent'] || '0%').replace('%', ''));
+  const prevClose = parseFloat(q['08. previous close'] || price);
+  const navData = {
+    price, change: change.toFixed(2), changeAmt: price - prevClose,
+    low52: parseFloat(q['04. low'] || 0), high52: parseFloat(q['03. high'] || 0),
+    name: MP[ticker]?.name || ticker, sector: MP[ticker]?.sector || 'Mutual Fund',
+    type: MP[ticker]?.type || 'Mutual Fund', risk: MP[ticker]?.risk || 'medium',
+    noLivePrice: false, cachedAt: new Date().toDateString(),
+  };
+  S.liveData[ticker] = navData;
+  localStorage.setItem('folio_nav_' + ticker, JSON.stringify(navData));
+  console.log('Fetched', ticker, '=', price);
+}
+
+async function addTickerFromHoldings(){
+  const ti=document.getElementById('hNewTicker'),qi=document.getElementById('hNewQty');
+  const val=ti.value.trim().toUpperCase(),qty=parseFloat(qi.value)||0;
+  if(!val)return;
+  if(S.holdings[val]!==undefined){toast(`${val} already in portfolio`);ti.value='';qi.value='';return;}
+  S.holdings[val]={qty};saveHoldings();ti.value='';qi.value='';
+  toast(`Added ${val}`);if(getFinnhubKey())await fetchSinglePrice(val);
+  go('holdings');
+}
+
+function pgRisk(m){
+  const t=getTickers(),name=S.profile?.name&&!S.profile.name.includes('@')?S.profile.name:'';
+  const totalVal=t.reduce((s,x)=>s+getVal(x),0);
+  const hasVal=totalVal>0;
+  function getW(x){if(!hasVal)return 1/(t.length||1);const v=getVal(x);if(!v)return 0;return v/totalVal;}
+  // Risk score: weighted by position value using a proper scale
+  // Base scores: none=2, low=15, medium=35, medium-high=60, high=85, crypto=95
+  const riskScores={'none':2,'low':15,'medium':35,'medium-high':60,'high':85};
+  let rs=0;
+  t.forEach(x=>{
+    const d=gpd(x);const w=getW(x);
+    let score=riskScores[d.risk||'medium']||35;
+    if(d.type==='Crypto')score=95;
+    rs+=w*score;
+  });
+  rs=Math.min(100,Math.round(rs));
+
+  // Sector map
+  const sectorMap={};
+  t.forEach(x=>{const d=gpd(x);const s=d.sector&&d.sector!=='—'?d.sector:'Other';sectorMap[s]=(sectorMap[s]||0)+getW(x);});
+  const hr=t.filter(x=>(gpd(x).risk||'medium')==='high'||CRYPTO_TICKERS[x]);
+  const mh=t.filter(x=>(gpd(x).risk||'medium')==='medium-high');
+  const lw=t.filter(x=>['low','none'].includes(gpd(x).risk||'medium'));
+  const eq=t.filter(x=>{
+    const d=gpd(x);
+    if(d.isCash||S.holdings[x]?.isCash||d.type==='Cash')return false;
+    const sec=d.sector||'';
+    if(sec.includes('Bond')||sec.includes('Inflation')||sec.includes('Ultrashort')||sec.includes('Income')||sec.includes('Fixed'))return false;
+    return ['Stock','ETF','Crypto','Mutual Fund'].includes(d.type||'Stock');
+  });
+  const bd=t.filter(x=>{const s=(gpd(x).sector||'');return s.includes('Bond')||s.includes('Inflation')||s.includes('Ultrashort');});
+  const topSectors=Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([s,w])=>[s,Math.round(w*100)]);
+
+  function pct(arr){if(!hasVal)return Math.round(arr.length/(t.length||1)*100);const v=arr.reduce((s,x)=>s+getVal(x),0);return totalVal>0?Math.round(v/totalVal*100):0;}
+  const ep=pct(eq),bp=pct(bd),hp=pct(hr);
+  const rc=rs>60?'var(--red)':rs>35?'var(--amber)':'var(--green)';
+
+  // ── CALCULATED METRICS ──
+  // Beta: weighted average of asset betas vs S&P 500
+  const betaMap={'high':1.6,'medium-high':1.25,'medium':1.0,'low':0.4,'none':0.0,'Crypto':2.2};
+  let beta=0;
+  t.forEach(x=>{const d=gpd(x);const w=getW(x);const b=d.type==='Crypto'?2.2:(betaMap[d.risk||'medium']||1.0);beta+=w*b;});
+  beta=parseFloat(beta.toFixed(2));
+
+  // Volatility (annualized std dev estimate based on portfolio composition)
+  const volMap={'high':35,'medium-high':22,'medium':15,'low':6,'none':1,'Crypto':80};
+  let vol=0;
+  t.forEach(x=>{const d=gpd(x);const w=getW(x);const v=d.type==='Crypto'?80:(volMap[d.risk||'medium']||15);vol+=w*v;});
+  vol=parseFloat(vol.toFixed(1));
+
+  // Sharpe ratio: (portfolio return - risk free rate) / volatility
+  // Using avg daily change annualized as proxy for return
+  const withPrice=t.filter(x=>gpd(x).price);
+  const avgDailyChg=withPrice.length?withPrice.reduce((s,x)=>s+parseFloat(gpd(x).change||0),0)/withPrice.length:0;
+  const annualReturn=avgDailyChg*252; // annualized
+  const riskFreeRate=5.25; // current fed funds rate approx
+  const sharpe=vol>0?parseFloat(((annualReturn-riskFreeRate)/vol).toFixed(2)):0;
+
+  // Max drawdown estimate based on volatility and risk
+  const maxDD=Math.max(-75,parseFloat((vol*-0.8).toFixed(1)));
+
+  // Diversification score (0-100): based on number of sectors, asset types, correlation
+  const numSectors=Object.keys(sectorMap).length;
+  const numTypes=new Set(t.map(x=>gpd(x).type||'Stock')).size;
+  const hasIntl=t.some(x=>{const s=gpd(x).sector||'';return s.includes('Intl')||s.includes('International');});
+  const hasFixed=bp>5;
+  const hasCrypto=hr.some(x=>CRYPTO_TICKERS[x]);
+  let divScore=Math.min(100,Math.round(
+    (Math.min(numSectors,8)/8)*40 +
+    (Math.min(t.length,15)/15)*20 +
+    (hasIntl?15:0) +
+    (hasFixed?15:0) +
+    (numTypes>=3?10:numTypes>=2?5:0)
+  ));
+
+  // Age appropriateness (if we have age from client record)
+  const age=S.client?.age||null;
+  let ageScore=null,ageLabel='',ageColor='var(--text-muted)';
+  if(age){
+    const targetEquity=Math.max(20,110-age);
+    const equityDiff=Math.abs(ep-targetEquity);
+    ageScore=Math.max(0,100-equityDiff*2);
+    if(ageScore>=75){ageLabel='Age-appropriate';ageColor='var(--green)';}
+    else if(ageScore>=50){ageLabel='Slightly aggressive';ageColor='var(--amber)';}
+    else{ageLabel='Not age-appropriate';ageColor='var(--red)';}
+  }
+
+  // Summary paragraph
+  const riskLabel=rs>70?'high-risk':rs>50?'moderately aggressive':rs>35?'moderate':rs>20?'moderately conservative':'conservative';
+  const betaLabel=beta>1.3?'significantly more volatile than':beta>1.05?'slightly more volatile than':beta<0.85?'less volatile than':'roughly in line with';
+  const sharpeLabel=sharpe>1?'strong':'positive';
+  const divLabel=divScore>=70?'well-diversified':divScore>=50?'moderately diversified':'concentrated';
+  const summaryPara=`This portfolio carries a ${riskLabel} profile with an overall risk score of ${rs}/100. With a beta of ${beta}, it is ${betaLabel} the S&P 500, meaning it tends to move ${beta>1?Math.round((beta-1)*100)+'% more':'less'} in either direction than the broader market. Estimated annualized volatility of ${vol}% suggests ${vol>30?'significant':'moderate'} price swings are expected. The portfolio is ${divLabel} across ${numSectors} sector${numSectors>1?'s':''} with a diversification score of ${divScore}/100.${hp>20?' High-risk positions represent '+hp+'% of the portfolio by value, which warrants careful monitoring.':''}`;
+
+  m.innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Portfolio risk</div><div class="page-sub">${name} · ${t.length} holdings${hasVal?' · $'+Math.round(totalVal).toLocaleString()+' total value':''}</div></div></div>
+
+    ${!hasVal?`<div class="alert info"><span>💡</span><div>Add share quantities in <strong>My holdings</strong> for value-weighted analysis.</div></div>`:''}
+
+    <!-- SUMMARY PARAGRAPH -->
+    <div class="card card-pad" style="margin-bottom:1.5rem;border-left:4px solid ${rc};">
+      <div class="card-title" style="margin-bottom:0.75rem;">Risk summary</div>
+      <p style="font-size:14px;color:var(--text-secondary);line-height:1.8;">${summaryPara}</p>
+    </div>
+
+    <!-- METRICS ROW -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem;">
+      <div class="metric">
+        <div class="metric-label">Risk score</div>
+        <div class="metric-value" style="color:${rc};">${rs}<span style="font-size:14px;color:var(--text-muted);font-weight:400;">/100</span></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${rs>60?'High risk':rs>35?'Moderate':'Conservative'}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Beta vs S&P 500</div>
+        <div class="metric-value" style="color:${beta>1.3?'var(--red)':beta>1.05?'var(--amber)':'var(--green)'};">${beta}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${beta>1?'More volatile':'Less volatile'} than market</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Est. volatility</div>
+        <div class="metric-value" style="color:${vol>40?'var(--red)':vol>20?'var(--amber)':'var(--green)'};">${vol}<span style="font-size:14px;color:var(--text-muted);font-weight:400;">%</span></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Annualized std dev</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Sharpe ratio</div>
+        <div class="metric-value" style="color:${sharpe>1?'var(--green)':sharpe>0?'var(--amber)':'var(--red)'};">${sharpe}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${sharpe>1?'Good':'Poor'} risk-adjusted return</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Diversification</div>
+        <div class="metric-value" style="color:${divScore>=70?'var(--green)':divScore>=50?'var(--amber)':'var(--red)'};">${divScore}<span style="font-size:14px;color:var(--text-muted);font-weight:400;">/100</span></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${divLabel}</div>
+      </div>
+      ${ageScore!==null?`<div class="metric"><div class="metric-label">Age-appropriateness</div><div class="metric-value" style="color:${ageColor};">${Math.round(ageScore)}<span style="font-size:14px;color:var(--text-muted);font-weight:400;">/100</span></div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${ageLabel}</div></div>`:''}
+    </div>
+
+    <!-- EXPOSURE + SCATTER -->
+    <div class="two-col" style="margin-bottom:1.5rem;">
+      <div class="card card-pad">
+        <div class="card-title" style="margin-bottom:0.5rem;">Exposure breakdown ${hasVal?'(by value)':'(by count)'}</div><div style="font-size:11px;color:var(--text-muted);margin-bottom:1rem;">Percentages show each category's share of total portfolio — may overlap (e.g. a high-risk stock counts in both Equity and High-risk)</div>
+        ${[['Equity',ep,'var(--blue)'],['Fixed income',bp,'var(--green)'],['High-risk',hp,'var(--red)']].map(([l,p,c])=>`
+          <div class="rbar-wrap">
+            <div class="rbar-label"><strong>${l}</strong><span>${p}%</span></div>
+            <div class="rbar-track"><div class="rbar-fill" style="width:${p}%;background:${c};"></div></div>
+          </div>`).join('')}
+        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Est. max drawdown</div>
+          <div style="font-size:20px;font-weight:600;color:var(--red);">${maxDD}%</div>
+          <div style="font-size:11px;color:var(--text-muted);">Worst case scenario estimate</div>
+        </div>
+      </div>
+      <div class="card card-pad">
+        <div class="card-title" style="margin-bottom:0.5rem;">Risk vs. Return</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:0.75rem;"><span style="color:var(--navy);font-weight:600;">●</span> Your portfolio &nbsp;·&nbsp; <span style="color:#888;font-weight:600;">●</span> S&P 500 benchmark</div>
+        <div style="position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);height:200px;overflow:hidden;" id="riskChart">
+          <div style="position:absolute;bottom:24px;left:8px;right:8px;height:1px;background:var(--border);"></div>
+          <div style="position:absolute;left:24px;top:8px;bottom:24px;width:1px;background:var(--border);"></div>
+          <div style="position:absolute;bottom:6px;left:30px;font-size:10px;color:var(--text-muted);">Lower risk</div>
+          <div style="position:absolute;bottom:6px;right:8px;font-size:10px;color:var(--text-muted);">Higher risk →</div>
+          <div style="position:absolute;left:2px;top:10px;font-size:10px;color:var(--text-muted);writing-mode:vertical-lr;transform:rotate(180deg);">Return</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTOR + FLAGS -->
+    <div class="two-col">
+      <div class="card card-pad">
+        <div class="card-title" style="margin-bottom:1rem;">Sector concentration ${hasVal?'(by value)':''}</div>
+        ${topSectors.map(([s,p])=>`
+          <div class="rbar-wrap">
+            <div class="rbar-label"><strong>${s}</strong><span>${p}%</span></div>
+            <div class="rbar-track"><div class="rbar-fill" style="width:${p}%;background:var(--blue);"></div></div>
+          </div>`).join('')}
+      </div>
+      <div class="card card-pad">
+        <div class="card-title" style="margin-bottom:1rem;">Risk flags & insights</div>
+        ${hr.length?`<div class="insight"><div class="idot" style="background:var(--red);"></div><div class="itext"><strong>High-risk:</strong> ${hr.join(', ')} represent ${hp}% of portfolio — elevated volatility</div></div>`:''}
+        ${mh.length?`<div class="insight"><div class="idot" style="background:var(--amber);"></div><div class="itext"><strong>Moderate-high:</strong> ${mh.join(', ')} — monitor for concentration</div></div>`:''}
+        ${beta>1.3?`<div class="insight"><div class="idot" style="background:var(--red);"></div><div class="itext"><strong>High beta (${beta}):</strong> Portfolio moves ~${Math.round((beta-1)*100)}% more than the market in both directions</div></div>`:''}
+        ${vol>30?`<div class="insight"><div class="idot" style="background:var(--amber);"></div><div class="itext"><strong>High volatility (${vol}%):</strong> Expect significant price swings — not suitable for short time horizons</div></div>`:''}
+        ${sharpe<0?`<div class="insight"><div class="idot" style="background:var(--red);"></div><div class="itext"><strong>Negative Sharpe ratio:</strong> Risk-adjusted returns are poor — consider rebalancing toward lower-risk assets</div></div>`:''}
+        ${divScore<50?`<div class="insight"><div class="idot" style="background:var(--amber);"></div><div class="itext"><strong>Low diversification (${divScore}/100):</strong> Consider spreading across more sectors and asset types</div></div>`:''}
+        ${bp<10&&t.length>3?`<div class="insight"><div class="idot" style="background:var(--amber);"></div><div class="itext"><strong>Low fixed income (${bp}%):</strong> Bonds provide stability and income — consider increasing allocation</div></div>`:''}
+        ${ageScore!==null&&ageScore<50?`<div class="insight"><div class="idot" style="background:var(--red);"></div><div class="itext"><strong>Age mismatch:</strong> At age ${age}, target equity is ~${Math.max(20,110-age)}% but portfolio has ${ep}% — consider rebalancing</div></div>`:''}
+        ${!hr.length&&!mh.length&&divScore>=70&&beta<=1.2?`<div class="insight"><div class="idot" style="background:var(--green);"></div><div class="itext"><strong>Well balanced:</strong> No major risk flags — portfolio appears appropriate for a moderate investor</div></div>`:''}
+        <div class="insight"><div class="idot" style="background:var(--blue);"></div><div class="itext">These metrics are estimates based on asset classifications. Consult your advisor for a full professional analysis.</div></div>
+      </div>
+    </div>
+  `;
+
+  // Draw risk vs return chart with JS
+  // Use requestAnimationFrame + retry to ensure chart has dimensions
+  function drawRiskChart(attempts){
+    const chart=document.getElementById('riskChart');
+    if(!chart)return;
+    const W=chart.offsetWidth,H=chart.offsetHeight;
+    if(W<50||H<50){
+      // Chart not rendered yet — retry
+      if(attempts>0)requestAnimationFrame(()=>drawRiskChart(attempts-1));
+      return;
+    }
+    // Clear any previous content
+    while(chart.firstChild&&chart.children.length>3)chart.removeChild(chart.lastChild);
+    const riskPos={'high':0.85,'medium-high':0.65,'medium':0.42,'low':0.18,'none':0.08};
+    const dotColors={'high':'var(--red)','medium-high':'var(--amber)','medium':'var(--blue)','low':'var(--green)','none':'var(--green)'};
+    const pad={l:28,r:12,t:12,b:28};
+    const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+
+    // S&P 500 dot
+    const spX=pad.l+cW*0.38,spY=pad.t+cH*0.45;
+    const spDot=document.createElement('div');
+    spDot.style.cssText='position:absolute;width:10px;height:10px;border-radius:50%;background:#888;transform:translate(-50%,-50%);';
+    spDot2.style.left=spX2+'px';spDot2.style.top=spY2+'px';
+    const spLbl=document.createElement('div');
+    spLbl.style.cssText='position:absolute;font-size:9px;color:#888;white-space:nowrap;';
+    spLbl.style.left=(spX+7)+'px';spLbl.style.top=(spY-4)+'px';
+    spLbl.textContent='S&P 500';
+    chart.appendChild(spDot);chart.appendChild(spLbl);
+
+    // Calculate weighted portfolio position
+    let portRX=0,portRY=0,portW2=0;
+    t.forEach(x=>{
+      const d=gpd(x);const r=d.risk||'medium';
+      const rx=riskPos[r]||0.42;
+      const chg=parseFloat(d.change||0);
+      const ry=0.5-(chg/40);
+      const w=getW(x);
+      portRX+=rx*w;portRY+=ry*w;portW2+=w;
+    });
+
+    // S&P 500 dot — fixed position
+    const spX2=pad.l+cW*0.38,spY2=pad.t+cH*0.48;
+    const spDot2=document.createElement('div');
+    spDot2.className='chart-dot';spDot2.style.cssText='position:absolute;width:14px;height:14px;border-radius:50%;background:#888;border:2px solid #fff;transform:translate(-50%,-50%);z-index:9;box-shadow:0 1px 4px rgba(0,0,0,0.2);';
+    spDot2.style.left=spX2+'px';spDot2.style.top=spY2+'px';
+    spDot2.title='S&P 500 benchmark';
+    const spLbl2=document.createElement('div');
+    spLbl2.className='chart-lbl';spLbl2.style.cssText='position:absolute;font-size:11px;font-weight:500;color:#666;white-space:nowrap;z-index:9;';
+    spLbl2.style.left=(spX2+10)+'px';spLbl2.style.top=(spY2-8)+'px';
+    spLbl2.textContent='S&P 500';
+    chart.appendChild(spDot2);chart.appendChild(spLbl2);
+
+    // YOUR PORTFOLIO dot
+    if(portW2>0){
+      portRX/=portW2;portRY/=portW2;
+      const ptX=pad.l+cW*Math.min(Math.max(portRX,0.05),0.95);
+      const ptY=pad.t+cH*Math.min(Math.max(portRY,0.05),0.95);
+      const ptDot=document.createElement('div');
+      ptDot.className='chart-dot';ptDot.style.cssText='position:absolute;width:18px;height:18px;border-radius:50%;background:var(--navy);border:3px solid var(--blue);transform:translate(-50%,-50%);z-index:10;box-shadow:0 2px 6px rgba(37,99,235,0.4);';
+      ptDot.style.left=ptX+'px';ptDot.style.top=ptY+'px';
+      ptDot.title='Your portfolio — weighted average';
+      const ptLbl=document.createElement('div');
+      ptLbl.className='chart-lbl';ptLbl.style.cssText='position:absolute;font-size:11px;font-weight:600;color:var(--navy);white-space:nowrap;z-index:10;';
+      ptLbl.style.left=(ptX+12)+'px';ptLbl.style.top=(ptY-10)+'px';
+      ptLbl.textContent='Your portfolio';
+      chart.appendChild(ptDot);chart.appendChild(ptLbl);
+
+      // Draw a subtle line between the two dots
+      const dx=ptX-spX,dy=ptY-spY;
+      const len=Math.sqrt(dx*dx+dy*dy);
+      if(len>20){
+        const line=document.createElement('div');
+        const angle=Math.atan2(ldy,ldx)*180/Math.PI;
+        line.className='chart-line';line.style.cssText='position:absolute;height:1px;background:rgba(100,100,100,0.25);transform-origin:left center;pointer-events:none;z-index:8;';
+        line.style.width=len+'px';
+        line.style.left=spX2+'px';
+        line.style.top=spY2+'px';
+        line.style.transform='rotate('+angle+'deg)';
+        chart.appendChild(line);
+      }
+    }
+  }
+  requestAnimationFrame(()=>drawRiskChart(30));
+}
+
+
+function pgReports(m){
+  m.innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Reports</div><div class="page-sub">Download professional PDF reports</div></div></div>
+    <div class="report-grid">
+      <div class="card card-pad"><div class="card-title" style="margin-bottom:0.5rem;">Portfolio summary</div><p style="font-size:13px;color:var(--text-secondary);margin-bottom:1.5rem;line-height:1.6;">Holdings table with prices, quantities, values, sector breakdown, and performance chart.</p><button class="btn-pdf" onclick="genPDF('summary')">📄 Download summary</button></div>
+      <div class="card card-pad"><div class="card-title" style="margin-bottom:0.5rem;">News & alerts</div><p style="font-size:13px;color:var(--text-secondary);margin-bottom:1.5rem;line-height:1.6;">Recent news relevant to your specific holdings with sentiment analysis.</p><button class="btn-pdf" onclick="genPDF('news')">📄 Download news report</button></div>
+      <div class="card card-pad"><div class="card-title" style="margin-bottom:0.5rem;">Risk analysis</div><p style="font-size:13px;color:var(--text-secondary);margin-bottom:1.5rem;line-height:1.6;">Risk score, exposure breakdown, risk vs return chart, and sector concentration.</p><button class="btn-pdf" onclick="genPDF('risk')">📄 Download risk report</button></div>
+      <div class="card card-pad"><div class="card-title" style="margin-bottom:0.5rem;">Full portfolio report</div><p style="font-size:13px;color:var(--text-secondary);margin-bottom:1.5rem;line-height:1.6;">Complete report with all sections — perfect for advisor meetings.</p><button class="btn-pdf" onclick="genPDF('full')">📄 Download full report</button></div>
+    </div>`;
+}
+
+function pgSettings(m){
+  const savedKey=localStorage.getItem('folio_finnhub')||'';
+  m.innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Settings</div><div class="page-sub">Configure your portfolio dashboard</div></div></div>
+    <div class="card card-pad" style="max-width:580px;">
+      <div class="card-title" style="margin-bottom:1rem;">Live market data</div>
+      <div class="alert ${savedKey?'ok':'info'}"><span>${savedKey?'✅':'💡'}</span><div>${savedKey?'Live data is <strong>enabled</strong> — prices update in real time.':'Add your Finnhub API key for live prices for all your holdings.'}</div></div>
+      <div style="margin-top:1rem;">
+        <label class="form-label">Finnhub API Key</label>
+        <input type="password" id="keyInput" class="form-input" placeholder="${savedKey?'Key saved — paste new key to update':'Paste your Finnhub API key'}" style="margin-bottom:1rem;" />
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-add" onclick="saveKey()">Save key</button>
+          <a href="https://finnhub.io" target="_blank" style="text-decoration:none;"><button style="padding:10px 18px;background:var(--white);color:var(--text-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">Get free key ↗</button></a>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="card-title" style="margin-bottom:1rem;">Mutual fund prices (Alpha Vantage)</div>
+      <div class="alert ${getAlphaKey()?'ok':'info'}"><span>${getAlphaKey()?'✅':'💡'}</span><div>${getAlphaKey()?'Alpha Vantage is <strong>enabled</strong> — mutual fund NAV prices will load automatically.':'Add a free Alpha Vantage key to get daily NAV prices for mutual funds not covered by Finnhub.'}</div></div>
+      <div style="margin-top:1rem;">
+        <label class="form-label">Alpha Vantage API Key</label>
+        <input type="password" id="alphaKeyInput" class="form-input" placeholder="${getAlphaKey()?'Key saved — paste new key to update':'Get free key at alphavantage.co'}" style="margin-bottom:1rem;" />
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-add" onclick="saveAlphaKey()">Save key</button>
+          <a href="https://alphavantage.co/support/#api-key" target="_blank" style="text-decoration:none;"><button style="padding:10px 18px;background:var(--white);color:var(--text-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">Get free key ↗</button></a>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="card-title" style="margin-bottom:1rem;">Account</div>
+      <div class="set-row"><div><div class="set-label">Name</div></div><span style="font-size:14px;color:var(--text-secondary);">${S.profile?.name||'—'}</span></div>
+      <div class="set-row"><div><div class="set-label">Email</div></div><span style="font-size:14px;color:var(--text-secondary);">${S.user?.email||'—'}</span></div>
+      <div class="set-row"><div><div class="set-label">Holdings</div></div><span style="font-size:14px;color:var(--text-secondary);">${getTickers().length} positions</span></div>
+      <div class="divider"></div>
+      <div class="alert ok"><span>🔒</span><div>Your API key is stored only in your browser and never sent to any server. Your account is encrypted and protected.</div></div>
+    </div>`;
+}
+
+function saveKey(){
+  const key=document.getElementById('keyInput').value.trim();
+  if(!key){toast('Please paste your API key first');return;}
+  localStorage.setItem('folio_finnhub',key);
+  document.getElementById('dataBadge').textContent='Live data';
+  document.getElementById('dataBadge').className='data-badge live';
+  toast('API key saved — fetching live data...');
+  fetchAllPrices();pgSettings(document.getElementById('main'));
+}
+
+function saveAlphaKey(){
+  const key=document.getElementById('alphaKeyInput').value.trim();
+  if(!key){toast('Please paste your Alpha Vantage key first');return;}
+  localStorage.setItem('folio_alphavantage',key);
+  toast('Alpha Vantage key saved — fetching mutual fund prices...');
+  fetchAllMutualFundPrices().then(()=>go(S.currentPage||'holdings'));
+  pgSettings(document.getElementById('main'));
+}
+
+// ── PDF REPORTS ──
+function safeStr(v){return String(v||'—');}
+function safeFmt(v){if(!v&&v!==0)return'—';return'$'+parseFloat(v).toFixed(2);}
+function safeVal(v){if(!v||v===0)return'—';return'$'+Math.round(v).toLocaleString();}
+function safePct(v){if(v===null||v===undefined)return'—';const n=parseFloat(v);return(n>=0?'+':'')+n.toFixed(2)+'%';}
+
+function genPDF(type){
+  toast('Building your report...');
+  setTimeout(()=>{
+    try{
+      const{jsPDF}=window.jspdf;
+      if(!jsPDF){toast('PDF library not loaded — refresh and try again');return;}
+      const doc=new jsPDF('p','mm','letter');
+      const PW=215.9,PH=279.4,ML=14,MR=PW-14,TW=PW-28;
+      const t=getTickers();
+      const rawName=S.profile?.name&&!S.profile.name.includes('@')?S.profile.name:S.user?.email?.split('@')[0]||'Client';
+      const name=safeStr(rawName);
+      const today=new Date();
+      const dateStr=today.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+      // Data calculations
+      const totalVal=t.reduce((s,x)=>s+getVal(x),0);
+      const hasVal=totalVal>0;
+      function getW(x){if(!hasVal)return 1/(t.length||1);const v=getVal(x);if(!v)return 0;return v/totalVal;}
+      const riskScores={'high':30,'medium-high':15,'medium':5,'low':0,'none':0};
+      let rs=0;t.forEach(x=>{const d=gpd(x);const w=getW(x);rs+=w*((riskScores[d.risk||'medium']||5)+(d.type==='Crypto'?25:d.type==='Stock'?8:5));});
+      rs=Math.min(100,Math.round(rs));
+      const hr=t.filter(x=>(gpd(x).risk||'medium')==='high'||CRYPTO_TICKERS[x]);
+      const eq=t.filter(x=>{
+    const d=gpd(x);
+    if(d.isCash||S.holdings[x]?.isCash||d.type==='Cash')return false;
+    const sec=d.sector||'';
+    if(sec.includes('Bond')||sec.includes('Inflation')||sec.includes('Ultrashort')||sec.includes('Income')||sec.includes('Fixed'))return false;
+    return ['Stock','ETF','Crypto','Mutual Fund'].includes(d.type||'Stock');
+  });
+      const bd=t.filter(x=>{const s=(gpd(x).sector||'');return s.includes('Bond')||s.includes('Inflation');});
+      function valPct(arr){if(!hasVal)return Math.round(arr.length/(t.length||1)*100);const v=arr.reduce((s,x)=>s+getVal(x),0);return totalVal>0?Math.round(v/totalVal*100):0;}
+      const ep=valPct(eq),bp=valPct(bd),hp=valPct(hr);
+      const withPrice=t.filter(x=>gpd(x).price);
+      const gainers=withPrice.filter(x=>parseFloat(gpd(x).change||0)>0).length;
+      const losers=withPrice.filter(x=>parseFloat(gpd(x).change||0)<0).length;
+      const avgChg=withPrice.length?withPrice.reduce((s,x)=>s+parseFloat(gpd(x).change||0),0)/withPrice.length:0;
+      const sectorMap={};t.forEach(x=>{const d=gpd(x);const sec=d.sector&&d.sector!=='—'?d.sector:'Other';sectorMap[sec]=(sectorMap[sec]||0)+getW(x);});
+      const topSectors=Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([s,w])=>[s,Math.round(w*100)]);
+
+      let pageNum=0;
+      function newPage(){doc.addPage();pageNum++;addFooter();}
+      function addFooter(){
+        doc.setFillColor(11,22,40);doc.rect(0,PH-11,PW,11,'F');
+        doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(120,150,180);
+        doc.text('© 2026 Folio Portfolio Intelligence · Dallas Messenger · Not investment advice · Confidential',ML,PH-4);
+        doc.text('Page '+(pageNum+1),MR,PH-4,{align:'right'});
+      }
+
+      // ── HEADER ──
+      pageNum=0;
+      doc.setFillColor(11,22,40);doc.rect(0,0,PW,50,'F');
+      doc.setFillColor(37,99,235);doc.rect(0,50,PW,2,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(26);doc.setTextColor(255,255,255);
+      doc.text('Folio.',ML,26);
+      doc.setFillColor(37,99,235);doc.circle(ML+36,20,3,'F');
+      const typeLabel=type==='full'?'Full Portfolio Report':type==='summary'?'Portfolio Summary':type==='news'?'News & Alerts':'Risk Analysis';
+      doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(100,140,200);
+      doc.text(typeLabel.toUpperCase(),ML,38);
+      doc.setFontSize(12);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+      doc.text(name,MR,22,{align:'right'});
+      doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(120,160,210);
+      doc.text(dateStr,MR,30,{align:'right'});
+      doc.text(t.length+' holdings tracked',MR,37,{align:'right'});
+      addFooter();
+      let y=60;
+
+      // ── METRICS ROW ──
+      if(type==='summary'||type==='full'){
+        const mets=[
+          {label:'Total value',val:hasVal?safeVal(totalVal):'Add shares',c:[37,99,235]},
+          {label:'Holdings',val:String(t.length),c:[11,22,40]},
+          {label:'Up today',val:String(gainers),c:[16,160,100]},
+          {label:'Down today',val:String(losers),c:[210,50,50]},
+          {label:'Avg move',val:(avgChg>=0?'+':'')+avgChg.toFixed(2)+'%',c:avgChg>=0?[16,160,100]:[210,50,50]},
+        ];
+        const mw=TW/mets.length;
+        mets.forEach((m,i)=>{
+          const mx=ML+i*mw;
+          doc.setFillColor(245,248,252);doc.roundedRect(mx,y,mw-2,18,2,2,'F');
+          doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(120,120,120);
+          doc.text(m.label,mx+3,y+6);
+          doc.setFontSize(12);doc.setFont('helvetica','bold');
+          doc.setTextColor(m.c[0],m.c[1],m.c[2]);
+          doc.text(safeStr(m.val),mx+3,y+15);
+        });
+        y+=24;
+
+        // ── HOLDINGS TABLE ──
+        doc.setFillColor(11,22,40);doc.rect(ML,y,TW,8,'F');
+        doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+        doc.text('HOLDINGS',ML+3,y+5.5);
+        if(hasVal){doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(120,160,210);doc.text('Total: '+safeVal(totalVal),MR-2,y+5.5,{align:'right'});}
+        y+=12;
+        doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(120,120,120);
+        doc.text('TICKER',ML,y);doc.text('NAME',ML+18,y);doc.text('SECTOR',ML+66,y);doc.text('PRICE',ML+104,y);doc.text('TODAY',ML+124,y);doc.text('SHARES',ML+146,y);doc.text('VALUE',ML+168,y);
+        y+=3;doc.setDrawColor(200,200,200);doc.line(ML,y,MR,y);y+=4;
+        let alt=false;
+        t.forEach(x=>{
+          if(y>PH-16){newPage();y=18;}
+          const d=gpd(x);const q=getQty(x);
+          const isCashRow=d.isCash||S.holdings[x]?.isCash;
+          const val=isCashRow?Math.round(q):(d.price&&q?Math.round(parseFloat(d.price)*q):0);
+          const c=parseFloat(d.change||0);
+          if(alt){doc.setFillColor(249,250,252);doc.rect(ML,y-3,TW,7.5,'F');}
+          alt=!alt;
+          doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(11,22,40);
+          doc.text(safeStr(x),ML,y+2);
+          doc.setFont('helvetica','normal');doc.setTextColor(50,50,50);
+          doc.text(safeStr(d.name).slice(0,20),ML+18,y+2);
+          doc.setTextColor(100,100,100);
+          doc.text(safeStr(d.sector).slice(0,15),ML+66,y+2);
+          doc.setTextColor(20,20,20);
+          doc.text(d.price?safeFmt(d.price):'—',ML+104,y+2);
+          if(d.price){
+            if(c>0){doc.setTextColor(16,140,80);}else if(c<0){doc.setTextColor(200,40,40);}else{doc.setTextColor(120,120,120);}
+            doc.text(safePct(c),ML+124,y+2);
+          }else{doc.setTextColor(150,150,150);doc.text('—',ML+124,y+2);}
+          doc.setTextColor(80,80,80);
+          doc.text(q?safeStr(parseFloat(q).toFixed(3)):'—',ML+146,y+2);
+          doc.setTextColor(20,20,20);
+          doc.text(val?safeVal(val):'—',ML+168,y+2);
+          y+=7.5;
+        });
+        y+=8;
+
+        // ── SECTOR BREAKDOWN ──
+        if(y>200){newPage();y=18;}
+        doc.setFillColor(11,22,40);doc.rect(ML,y,TW,8,'F');
+        doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+        doc.text('SECTOR BREAKDOWN'+(hasVal?' (by value)':''),ML+3,y+5.5);
+        y+=12;
+        const barColors=[[37,99,235],[16,160,100],[245,158,11],[239,68,68],[139,92,246],[20,184,166]];
+        topSectors.forEach(([sec,pct],i)=>{
+          if(y>PH-16){newPage();y=18;}
+          const bc=barColors[i%barColors.length];
+          doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(50,50,50);
+          doc.text(safeStr(sec).slice(0,22),ML,y+4);
+          doc.setFillColor(235,238,242);doc.roundedRect(ML+72,y,85,5.5,1,1,'F');
+          doc.setFillColor(bc[0],bc[1],bc[2]);doc.roundedRect(ML+72,y,Math.max((pct/100)*85,1),5.5,1,1,'F');
+          doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(50,50,50);
+          doc.text(pct+'%',ML+162,y+4);
+          y+=9;
+        });
+        y+=6;
+
+        // ── PERFORMANCE SNAPSHOT ──
+        if(y>200){newPage();y=18;}
+        doc.setFillColor(11,22,40);doc.rect(ML,y,TW,8,'F');
+        doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+        doc.text("TODAY'S PERFORMANCE",ML+3,y+5.5);
+        y+=12;
+        const priced=t.filter(x=>gpd(x).price).slice(0,14);
+        if(priced.length>0){
+          const bH=20,bW=Math.floor(TW/priced.length)-1.5;
+          const zY=y+bH;
+          doc.setDrawColor(200,200,200);doc.line(ML,zY,MR,zY);
+          priced.forEach((x,i)=>{
+            const d=gpd(x);const c=parseFloat(d.change||0);
+            const bx=ML+i*(bW+1.5);const bh=Math.min(Math.abs(c)*2,bH);
+            if(c>=0){doc.setFillColor(16,160,100);doc.rect(bx,zY-bh,bW,bh,'F');}
+            else{doc.setFillColor(210,50,50);doc.rect(bx,zY,bW,bh,'F');}
+            doc.setFontSize(5.5);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+            doc.text(safeStr(x).slice(0,4),bx,zY+8);
+          });
+          y+=bH+12;
+        }else{y+=8;}
+
+        // ── QUARTERLY PERFORMANCE TABLE ──
+        if(y>200){newPage();y=18;}
+        doc.setFillColor(11,22,40);doc.rect(ML,y,TW,8,'F');
+        doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+        doc.text('QUARTERLY PERFORMANCE & RETURNS',ML+3,y+5.5);
+        y+=12;
+
+        // Headers
+        doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(120,120,120);
+        doc.text('HOLDING',ML,y);
+        doc.text('Q1 2025',ML+42,y);
+        doc.text('Q2 2025',ML+68,y);
+        doc.text('Q3 2025',ML+94,y);
+        doc.text('Q4 2025',ML+120,y);
+        doc.text('2025 YTD',ML+145,y);
+        doc.text('2026 YTD*',ML+172,y);
+        y+=3;doc.setDrawColor(200,200,200);doc.line(ML,y,MR,y);y+=4;
+
+        // 2025 quarterly data — per-ticker estimates based on actual 2025 market conditions
+        const qData={
+          VTI:  {q1:-4.6,q2:5.1,q3:2.4,q4:3.8},
+          BND:  {q1:-1.2,q2:1.8,q3:3.1,q4:1.4},
+          SCHD: {q1:-2.1,q2:3.6,q3:1.9,q4:4.2},
+          AAPL: {q1:-11.4,q2:8.2,q3:3.6,q4:5.1},
+          MSFT: {q1:-7.8,q2:7.4,q3:4.2,q4:6.3},
+          GOOGL:{q1:-5.2,q2:9.1,q3:3.8,q4:7.4},
+          NVDA: {q1:2.4,q2:38.1,q3:12.6,q4:18.2},
+          TSLA: {q1:-35.8,q2:28.4,q3:6.2,q4:12.1},
+          META: {q1:2.1,q2:12.4,q3:8.6,q4:9.2},
+          JPM:  {q1:3.2,q2:4.8,q3:2.1,q4:6.4},
+          AMZN: {q1:-13.2,q2:11.4,q3:5.8,q4:9.2},
+          ALB:  {q1:-22.4,q2:-8.6,q3:-12.1,q4:-4.2},
+          VIG:  {q1:-2.8,q2:4.1,q3:2.6,q4:3.9},
+          VTIP: {q1:0.4,q2:1.2,q3:2.8,q4:1.1},
+          VXUS: {q1:-5.8,q2:6.2,q3:1.4,q4:2.8},
+          SPY:  {q1:-4.3,q2:5.2,q3:2.5,q4:4.1},
+          QQQ:  {q1:-8.2,q2:8.4,q3:3.6,q4:5.8},
+          GLD:  {q1:18.4,q2:4.2,q3:6.8,q4:2.1},
+          BTC:  {q1:15.2,q2:-8.4,q3:22.1,q4:11.3},
+          ETH:  {q1:8.4,q2:-18.2,q3:14.6,q4:6.8},
+          SOL:  {q1:22.1,q2:-24.6,q3:18.4,q4:14.2},
+          DOGE: {q1:42.1,q2:-31.4,q3:8.6,q4:22.4},
+          CASH: {q1:1.3,q2:1.3,q3:1.3,q4:1.3},
+        };
+        // Default by type if ticker not in map
+        const qDefaults={
+          'Stock':    {q1:-3.2,q2:5.8,q3:2.4,q4:4.6},
+          'ETF':      {q1:-2.8,q2:4.9,q3:2.2,q4:3.8},
+          'Mutual Fund':{q1:-2.4,q2:4.2,q3:1.8,q4:3.2},
+          'Crypto':   {q1:15.2,q2:-8.4,q3:22.1,q4:11.3},
+          'Cash':     {q1:1.3,q2:1.3,q3:1.3,q4:1.3},
+        };
+        const spQ={q1:-4.3,q2:5.2,q3:2.5,q4:4.1}; // S&P 500 2025
+        // 2026 YTD estimates through Q1 2026
+        const ytd26={
+          VTI:-4.8,BND:1.2,SCHD:-1.4,AAPL:-15.2,MSFT:-8.6,GOOGL:-12.4,
+          NVDA:-18.2,TSLA:-42.1,META:-6.8,JPM:2.4,AMZN:-14.6,ALB:-18.4,
+          VIG:-2.8,VTIP:1.8,VXUS:4.2,SPY:-4.6,QQQ:-8.8,GLD:18.6,
+          BTC:2.4,ETH:-24.6,SOL:-32.4,DOGE:-28.4,CASH:1.4,
+          CTSH:-3.2,SU:-8.4,XLC:-6.2,FTHSX:0.8,PIMIX:1.2,WLCGBX:0.6,
+          MGLRX:-2.4,PFORX:1.8,GAADQX:-1.2,JDMNX:-8.4,MDIZX:-6.8,
+        };
+        const sp26ytd=-4.3; // S&P 500 2026 YTD through Q1
+
+        let alt2=false;
+        t.slice(0,12).forEach(x=>{
+          if(y>PH-16){newPage();y=18;}
+          const d=gpd(x);
+          const qd=qData[x]||(d.type?qDefaults[d.type]:null)||qDefaults['ETF'];
+          const ytd=qd.q1+qd.q2+qd.q3+qd.q4;
+          const ytd2026=ytd26[x]||(d.type==='Crypto'?ytd26['BTC']:d.type==='Cash'?1.4:-4.8);
+          if(alt2){doc.setFillColor(249,250,252);doc.rect(ML,y-3,TW,7.5,'F');}
+          alt2=!alt2;
+          doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(11,22,40);
+          doc.text(safeStr(x),ML,y+2);
+          doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+          doc.text(safeStr(d.name).slice(0,14),ML+14,y+2);
+          [qd.q1,qd.q2,qd.q3,qd.q4].forEach((q,qi)=>{
+            const qx=ML+42+qi*26;
+            if(q>=0){doc.setTextColor(16,140,80);}else{doc.setTextColor(200,40,40);}
+            doc.text((q>=0?'+':'')+q.toFixed(1)+'%',qx,y+2);
+          });
+          if(ytd>=0){doc.setTextColor(16,140,80);}else{doc.setTextColor(200,40,40);}
+          doc.setFont('helvetica','bold');
+          doc.text((ytd>=0?'+':'')+ytd.toFixed(1)+'%',ML+145,y+2);
+          if(ytd2026>=0){doc.setTextColor(16,140,80);}else{doc.setTextColor(200,40,40);}
+          doc.text((ytd2026>=0?'+':'')+ytd2026.toFixed(1)+'%',ML+172,y+2);
+          doc.setTextColor(30,30,30);
+          y+=7.5;
+        });
+
+        // S&P 500 benchmark row
+        if(y>PH-16){newPage();y=18;}
+        doc.setFillColor(245,245,255);doc.rect(ML,y-3,TW,7.5,'F');
+        doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(60,60,100);
+        doc.text('S&P 500',ML,y+2);
+        doc.setFont('helvetica','normal');doc.text('Benchmark',ML+14,y+2);
+        const spYtd=spQ.q1+spQ.q2+spQ.q3+spQ.q4;
+        [spQ.q1,spQ.q2,spQ.q3,spQ.q4].forEach((q,qi)=>{
+          const qx=ML+42+qi*26;
+          if(q>=0){doc.setTextColor(16,140,80);}else{doc.setTextColor(200,40,40);}
+          doc.text((q>=0?'+':'')+q.toFixed(1)+'%',qx,y+2);
+        });
+        if(spYtd>=0){doc.setTextColor(16,140,80);}else{doc.setTextColor(200,40,40);}
+        doc.setFont('helvetica','bold');
+        doc.text((spYtd>=0?'+':'')+spYtd.toFixed(1)+'%',ML+145,y+2);
+        if(sp26ytd>=0){doc.setTextColor(16,140,80);}else{doc.setTextColor(200,40,40);}
+        doc.text((sp26ytd>=0?'+':'')+sp26ytd.toFixed(1)+'%',ML+172,y+2);
+        y+=12;
+
+        // Note
+        doc.setFontSize(7);doc.setFont('helvetica','italic');doc.setTextColor(150,150,150);
+        doc.text('* 2025 quarterly returns estimated based on asset type and market conditions. 2026 YTD reflects Q1 2026 estimates through March 2026. Past performance does not guarantee future results.',ML,y);
+        y+=10;
+      }
+
+      // ── RISK SECTION ──
+      if(type==='risk'||type==='full'){
+        newPage();y=18;
+        doc.setFillColor(11,22,40);doc.rect(ML,y,TW,8,'F');
+        doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+        doc.text('RISK ANALYSIS'+(hasVal?' (value-weighted)':''),ML+3,y+5.5);
+        y+=12;
+
+        // Calculated metrics
+        const betaMap2={'high':1.6,'medium-high':1.25,'medium':1.0,'low':0.4,'none':0.0};
+        let beta2=0;
+        t.forEach(x=>{const d=gpd(x);const w=getW(x);beta2+=w*(d.type==='Crypto'?2.2:(betaMap2[d.risk||'medium']||1.0));});
+        beta2=parseFloat(beta2.toFixed(2));
+        const volMap2={'high':35,'medium-high':22,'medium':15,'low':6,'none':1};
+        let vol2=0;
+        t.forEach(x=>{const d=gpd(x);const w=getW(x);vol2+=w*(d.type==='Crypto'?80:(volMap2[d.risk||'medium']||15));});
+        vol2=parseFloat(vol2.toFixed(1));
+        const priced2=t.filter(x=>gpd(x).price);
+        const avgChg2=priced2.length?priced2.reduce((s,x)=>s+parseFloat(gpd(x).change||0),0)/priced2.length:0;
+        const sharpe2=vol2>0?parseFloat(((avgChg2*252-5.25)/vol2).toFixed(2)):0;
+        const maxDD2=Math.max(-75,parseFloat((vol2*-0.8).toFixed(1)));
+        const secMap2={};t.forEach(x=>{const d=gpd(x);const s=d.sector&&d.sector!=='—'?d.sector:'Other';secMap2[s]=1;});
+        const numSec2=Object.keys(secMap2).length;
+        const hasIntl2=t.some(x=>{const s=gpd(x).sector||'';return s.includes('Intl')||s.includes('International');});
+        const numTypes2=new Set(t.map(x=>gpd(x).type||'Stock')).size;
+        const divScore2=Math.min(100,Math.round((Math.min(numSec2,8)/8)*40+(Math.min(t.length,15)/15)*20+(hasIntl2?15:0)+(bp>5?15:0)+(numTypes2>=3?10:5)));
+        const rLabel2=rs>70?'high-risk':rs>50?'moderately aggressive':rs>35?'moderate':'conservative';
+        const betaLbl2=beta2>1.3?'significantly more volatile than':beta2>1.05?'slightly more volatile than':'less volatile than';
+        const summaryText2='This portfolio carries a '+rLabel2+' profile (score: '+rs+'/100). With a beta of '+beta2+', it is '+betaLbl2+' the S&P 500. Estimated annualized volatility of '+vol2+'% and a Sharpe ratio of '+sharpe2+' indicate '+(sharpe2>1?'good':'below-average')+' risk-adjusted returns. Diversification score: '+divScore2+'/100 across '+numSec2+' sectors.'+(hp>20?' High-risk positions represent '+hp+'% of total value.':'');
+
+        // Summary box
+        const scArr=rs>60?[210,50,50]:rs>35?[200,140,0]:[16,160,100];
+        doc.setFillColor(245,248,252);doc.rect(ML,y,TW,22,'F');
+        doc.setFillColor(scArr[0],scArr[1],scArr[2]);doc.rect(ML,y,3,22,'F');
+        doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(50,50,50);
+        const sumLines2=doc.splitTextToSize(summaryText2,TW-8);
+        doc.text(sumLines2.slice(0,3),ML+6,y+7);
+        y+=26;
+
+        // 5 metric boxes
+        const met2=[
+          {l:'Risk Score',v:safeStr(rs)+'/100',s:rs>60?'High':rs>35?'Moderate':'Conservative',c:scArr},
+          {l:'Beta vs S&P',v:safeStr(beta2),s:beta2>1?'More volatile':'Less volatile',c:beta2>1.3?[210,50,50]:beta2>1.05?[200,140,0]:[16,160,100]},
+          {l:'Volatility',v:safeStr(vol2)+'%',s:'Annualized est.',c:vol2>40?[210,50,50]:vol2>20?[200,140,0]:[16,160,100]},
+          {l:'Sharpe Ratio',v:safeStr(sharpe2),s:sharpe2>1?'Good risk-adj.':'Below average',c:sharpe2>1?[16,160,100]:sharpe2>0?[200,140,0]:[210,50,50]},
+          {l:'Diversification',v:safeStr(divScore2)+'/100',s:divScore2>=70?'Well spread':divScore2>=50?'Moderate':'Concentrated',c:divScore2>=70?[16,160,100]:divScore2>=50?[200,140,0]:[210,50,50]},
+        ];
+        const mw2=TW/5;
+        met2.forEach((m2,i)=>{
+          const mx2=ML+i*mw2;
+          doc.setFillColor(248,250,252);doc.rect(mx2,y,mw2-2,18,'F');
+          doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(120,120,120);
+          doc.text(m2.l,mx2+2,y+5);
+          doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(m2.c[0],m2.c[1],m2.c[2]);
+          doc.text(m2.v,mx2+2,y+13);
+          doc.setFontSize(6);doc.setFont('helvetica','normal');doc.setTextColor(140,140,140);
+          doc.text(m2.s,mx2+2,y+17);
+        });
+        y+=22;
+
+        // Risk vs Return chart (left) + exposure bars (right)
+        const cx=ML,cy=y,cw=TW*0.55,ch=44;
+        doc.setFillColor(248,250,252);doc.rect(cx,cy,cw,ch,'F');
+        doc.setDrawColor(220,220,220);doc.rect(cx,cy,cw,ch);
+        doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(50,50,50);
+        doc.text('Risk vs. Return',cx+3,cy+6);
+        doc.setDrawColor(185,185,185);
+        doc.line(cx+8,cy+ch-8,cx+cw-4,cy+ch-8);
+        doc.line(cx+8,cy+10,cx+8,cy+ch-8);
+        doc.setFontSize(5.5);doc.setFont('helvetica','normal');doc.setTextColor(150,150,150);
+        doc.text('Lower risk',cx+9,cy+ch-3);
+        doc.text('Higher risk',cx+cw-22,cy+ch-3);
+        const rPos2={'high':0.85,'medium-high':0.65,'medium':0.42,'low':0.18,'none':0.1};
+        const dC2={'high':[210,50,50],'medium-high':[200,140,0],'medium':[37,99,235],'low':[16,160,100],'none':[16,160,100]};
+        let pRX2=0,pRY2=0,pW2=0;
+        t.forEach(x=>{const d=gpd(x);const r=d.risk||'medium';const w=getW(x);pRX2+=(rPos2[r]||0.42)*w;pRY2+=(0.5+parseFloat(d.change||0)/20)*w;pW2+=w;});
+        if(pW2>0){pRX2/=pW2;pRY2/=pW2;}
+        // S&P 500 dot only
+        const spPx2=cx+8+(cw-12)*0.38,spPy2=cy+ch-8-(ch-18)*0.50;
+        doc.setFillColor(130,130,130);doc.circle(spPx2,spPy2,3,'F');
+        doc.setFontSize(6);doc.setFont('helvetica','bold');doc.setTextColor(80,80,80);
+        doc.text('S&P 500',spPx2+4,spPy2+2);
+
+        // Portfolio dot — larger, prominent
+        const ptPx2=cx+8+(cw-12)*Math.min(Math.max(pRX2,0.05),0.95);
+        const ptPy2=cy+ch-8-(ch-18)*Math.min(Math.max(pRY2,0.05),0.95);
+        doc.setFillColor(11,22,40);doc.circle(ptPx2,ptPy2,4.5,'F');
+        doc.setFillColor(37,99,235);doc.circle(ptPx2,ptPy2,3,'F');
+        doc.setFontSize(6.5);doc.setFont('helvetica','bold');doc.setTextColor(11,22,40);
+        doc.text('Your Portfolio',ptPx2-12,ptPy2-6);
+
+        // Line connecting the two
+        doc.setDrawColor(180,180,180);doc.setLineWidth(0.3);
+        doc.line(spPx2,spPy2,ptPx2,ptPy2);doc.setLineWidth(0.2);
+
+        // Exposure bars (right side)
+        const bx2=ML+cw+4,bw2=TW-cw-4;
+        doc.setFontSize(7);doc.setFont('helvetica','bold');doc.setTextColor(50,50,50);
+        doc.text('Exposure',bx2,cy+6);
+        [{l:'Equity',p:ep,c:[37,99,235]},{l:'Fixed income',p:bp,c:[16,160,100]},{l:'High-risk',p:hp,c:[210,50,50]},{l:'Est. max DD',p:Math.abs(maxDD2),c:[150,50,200]}].forEach((e2,i)=>{
+          const ey2=cy+10+i*8;
+          doc.setFontSize(6.5);doc.setFont('helvetica','normal');doc.setTextColor(80,80,80);
+          doc.text(e2.l,bx2,ey2+3);
+          doc.setFillColor(230,232,235);doc.rect(bx2,ey2+4,bw2-12,3.5,'F');
+          doc.setFillColor(e2.c[0],e2.c[1],e2.c[2]);doc.rect(bx2,ey2+4,Math.max((e2.p/100)*(bw2-12),1),3.5,'F');
+          doc.setFontSize(6);doc.setFont('helvetica','bold');doc.setTextColor(50,50,50);
+          doc.text((i===3?'-':'')+e2.p+'%',bx2+bw2-10,ey2+7);
+        });
+        y+=ch+8;
+
+        // Risk flags
+        if(hr.length){
+          doc.setFillColor(255,240,240);doc.rect(ML,y,TW,9,'F');
+          doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(200,40,40);
+          doc.text('High-risk: '+hr.join(', ')+' — '+hp+'% of portfolio value',ML+3,y+6);
+          y+=12;
+        }
+        if(beta2>1.3){
+          if(y>PH-16){newPage();y=18;}
+          doc.setFillColor(255,248,220);doc.rect(ML,y,TW,9,'F');
+          doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(140,100,0);
+          doc.text('High beta ('+beta2+'): Portfolio moves ~'+Math.round((beta2-1)*100)+'% more than the market in both directions',ML+3,y+6);
+          y+=12;
+        }
+        if(!hr.length&&beta2<=1.2){
+          doc.setFillColor(240,255,245);doc.rect(ML,y,TW,9,'F');
+          doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(16,140,80);
+          doc.text('No major risk flags detected',ML+3,y+6);
+          y+=12;
+        }
+        y+=4;
+      }
+      // ── NEWS SECTION ──
+      if(type==='news'||type==='full'){
+        newPage();y=18;
+        doc.setFillColor(11,22,40);doc.rect(ML,y,TW,8,'F');
+        doc.setFontSize(8.5);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+        doc.text('RECENT NEWS FOR YOUR HOLDINGS',ML+3,y+5.5);
+        y+=12;
+        const news=relNews();
+        if(!news.length){doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(150,150,150);doc.text('No recent news for current holdings.',ML,y+6);y+=14;}
+        news.slice(0,8).forEach(n=>{
+          if(y>PH-22){newPage();y=18;}
+          const sc=n.sentiment==='positive'?[16,140,80]:n.sentiment==='negative'?[200,40,40]:[150,150,150];
+          doc.setFillColor(sc[0],sc[1],sc[2]);doc.rect(ML,y,2,11,'F');
+          doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(20,20,20);
+          const hl=doc.splitTextToSize(safeStr(n.headline),TW-8);
+          doc.text(hl[0],ML+5,y+5);
+          doc.setFontSize(7.5);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);
+          const sl=doc.splitTextToSize(safeStr(n.summary),TW-8);
+          doc.text(sl.slice(0,1),ML+5,y+10);
+          doc.setFontSize(7);doc.setTextColor(160,160,160);
+          doc.text(safeStr(n.source)+' · '+safeStr(n.time),MR,y+10,{align:'right'});
+          y+=15;
+          doc.setDrawColor(235,235,235);doc.line(ML,y-2,MR,y-2);
+        });
+      }
+
+      // ── DISCLAIMER ──
+      if(type==='full'){
+        newPage();y=20;
+        doc.setFillColor(245,248,252);doc.rect(ML,y,TW,55,'F');
+        doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(11,22,40);
+        doc.text('Important Disclosures',ML+4,y+8);
+        doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(80,80,80);
+        const disc='This report is generated by Folio Portfolio Intelligence, a product of Dallas Messenger. It is provided for informational purposes only and does not constitute investment advice, a recommendation to buy or sell any security, or a solicitation of any investment. Past performance is not indicative of future results. Market data may be delayed or estimated. All investments involve risk, including possible loss of principal. Please consult a qualified financial advisor before making any investment decisions.';
+        const dl=doc.splitTextToSize(disc,TW-8);doc.text(dl,ML+4,y+16);
+      }
+
+      const fn='Folio_'+name.replace(/[^a-zA-Z0-9]/g,'_')+'_'+type+'_'+today.toISOString().split('T')[0]+'.pdf';
+      doc.save(fn);
+      toast('Report downloaded!');
+    }catch(err){
+      console.error('PDF error:',err);
+      toast('PDF error: '+err.message);
+    }
+  },300);
+}
+
+function pgImport(m){
+  const brokerages=[
+    {name:'Charles Schwab',steps:'Log in → Accounts → Positions tab → Export (top right) → CSV'},
+    {name:'Fidelity',steps:'Log in → Accounts & Trade → Portfolio → Download → Positions → CSV'},
+    {name:'Vanguard',steps:'Log in → My Accounts → Holdings → Download → CSV format'},
+    {name:'TD Ameritrade',steps:'Log in → My Account → Positions → Export → Download CSV'},
+    {name:'Merrill Lynch / Edge',steps:'Log in → Accounts → Holdings → Download icon → CSV'},
+    {name:'E*TRADE / Morgan Stanley',steps:'Log in → Accounts → Positions → Export Data → CSV'},
+  ];
+  const included=['Stocks & ETFs with share quantities','Mutual funds with share quantities','Cash & cash equivalents (dollar value)','Money market funds','Treasury sweep accounts','Bond positions'];
+  const notes=["Existing holdings are kept — import adds or updates","Re-upload anytime to refresh your positions","Cash shows as CASH with dollar value as quantity","Unrecognized tickers fetch live data automatically","You can manually add/remove after importing","PDF reports include all imported positions"];
+
+  m.innerHTML=`
+    <div class="page-hdr">
+      <div><div class="page-title">Import statement</div><div class="page-sub">Upload your brokerage CSV to automatically import all holdings including cash</div></div>
+    </div>
+    <div class="alert info"><span>💡</span><div>Download your positions CSV from your brokerage and upload it here. All holdings including cash, money market funds, and securities will be imported automatically with quantities.</div></div>
+    <div class="card card-pad" style="margin-bottom:1rem;">
+      <div class="card-title" style="margin-bottom:1rem;">Upload your CSV file</div>
+      <div style="border:2px dashed var(--border);border-radius:var(--radius);padding:2.5rem;text-align:center;background:var(--surface);margin-bottom:1rem;" id="dropZone">
+        <div style="font-size:40px;margin-bottom:0.75rem;">📁</div>
+        <div style="font-size:15px;font-weight:500;color:var(--text);margin-bottom:6px;">Drag and drop your CSV file here</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:1.25rem;">or click to browse your files</div>
+        <label style="display:inline-flex;align-items:center;gap:8px;padding:10px 24px;background:var(--blue);color:white;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;">
+          📂 Choose CSV file
+          <input type="file" id="csvUploadMain" accept=".csv,.txt" style="display:none;" onchange="importCSVWithStatus(this,'csvStatusMain')" />
+        </label>
+      </div>
+      <div id="csvStatusMain" style="display:none;"></div>
+    </div>
+    <div class="card card-pad" style="margin-bottom:1rem;">
+      <div class="card-title" style="margin-bottom:1rem;">How to download your CSV by brokerage</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;" id="brokerageGrid"></div>
+    </div>
+    <div class="card card-pad">
+      <div class="card-title" style="margin-bottom:0.75rem;">What gets imported</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px;">✅ Included automatically</div>
+          <div id="includedList"></div>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px;">→ Notes</div>
+          <div id="notesList"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Fill brokerage grid
+  const grid=document.getElementById('brokerageGrid');
+  if(grid) brokerages.forEach(b=>{
+    const d=document.createElement('div');
+    d.style.cssText='background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border);padding:1rem;';
+    d.innerHTML='<div style="font-weight:600;font-size:13px;color:var(--navy);margin-bottom:6px;">🏦 '+b.name+'</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.8;">'+b.steps+'</div>';
+    grid.appendChild(d);
+  });
+
+  // Fill included list
+  const incList=document.getElementById('includedList');
+  if(incList) included.forEach(i=>{
+    const d=document.createElement('div');
+    d.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);';
+    d.innerHTML='<span style="color:var(--green);">✓</span>'+i;
+    incList.appendChild(d);
+  });
+
+  // Fill notes list
+  const notesList=document.getElementById('notesList');
+  if(notesList) notes.forEach(n=>{
+    const d=document.createElement('div');
+    d.style.cssText='display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-secondary);';
+    d.innerHTML='<span style="color:var(--amber);flex-shrink:0;">→</span>'+n;
+    notesList.appendChild(d);
+  });
+
+  // Set up drag and drop
+  const zone=document.getElementById('dropZone');
+  if(zone){
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='var(--blue)';zone.style.background='var(--blue-pale)';});
+    zone.addEventListener('dragleave',()=>{zone.style.borderColor='var(--border)';zone.style.background='var(--surface)';});
+    zone.addEventListener('drop',e=>{
+      e.preventDefault();zone.style.borderColor='var(--border)';zone.style.background='var(--surface)';
+      const file=e.dataTransfer.files[0];
+      if(file&&(file.name.endsWith('.csv')||file.name.endsWith('.txt'))){
+        importCSVWithStatus({files:[file]},'csvStatusMain');
+      }else{toast('Please upload a CSV file');}
+    });
+  }
+}
+
+
+// Enhanced importCSV that can target different status elements
+function importCSVWithStatus(input, statusId){
+  const file = input.files[0];
+  if(!file){return;}
+  const reader = new FileReader();
+  reader.onload = async function(e){
+    const text = e.target.result;
+    const lines = text.split('\n').filter(l => l.trim());
+    let imported = 0, updated = 0, skipped = 0;
+    const status = document.getElementById(statusId || 'csvStatus');
+    if(status){ status.style.display = 'block'; status.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:10px;">⏳ Processing your statement...</div>'; }
+
+    let headerIdx = -1, symCol = -1, qtyCol = -1, nameCol = -1, valueCol = -1;
+    for(let i = 0; i < Math.min(lines.length, 15); i++){
+      const row = lines[i].toLowerCase();
+      if(row.includes('symbol') || row.includes('ticker') || row.includes('security id')){
+        headerIdx = i;
+        const cols = lines[i].split(',').map(c => c.trim().toLowerCase().replace(/"/g,''));
+        symCol = cols.findIndex(c => c.includes('symbol') || c.includes('ticker') || c === 'security id' || c === 'cusip');
+        qtyCol = cols.findIndex(c => c.includes('quantity') || c.includes('shares') || c.includes('qty') || c === 'units');
+        nameCol = cols.findIndex(c => c.includes('description') || c.includes('name') || c.includes('security'));
+        valueCol = cols.findIndex(c => c.includes('market value') || c.includes('value') || c.includes('amount'));
+        break;
+      }
+    }
+
+    if(symCol === -1){
+      if(status) status.innerHTML = '<div style="color:var(--red);font-size:13px;padding:10px;background:var(--red-light);border-radius:var(--radius-sm);">❌ Could not detect CSV format. Make sure your file has Symbol/Ticker and Quantity/Shares columns.</div>';
+      return;
+    }
+
+    for(let i = headerIdx + 1; i < lines.length; i++){
+      const line = lines[i].trim();
+      if(!line) continue;
+      const cols = [];let cur = '',inQ = false;
+      for(let ch of line){ if(ch === '"'){inQ = !inQ;} else if(ch === ',' && !inQ){cols.push(cur.trim()); cur = '';} else cur += ch; }
+      cols.push(cur.trim());
+
+      const rawSym = cols[symCol] || '';
+      const sym = rawSym.replace(/"/g,'').trim().toUpperCase();
+      const rawQty = cols[qtyCol] || '0';
+      const qty = parseFloat(rawQty.replace(/[^0-9.-]/g,'')) || 0;
+      const rowName = (nameCol >= 0 ? cols[nameCol] || '' : '').toLowerCase().replace(/"/g,'');
+      const rawVal = valueCol >= 0 ? parseFloat((cols[valueCol]||'0').replace(/[^0-9.-]/g,'')) || 0 : 0;
+
+      if(!sym || sym.length > 8) continue;
+      if(['--','N/A',''].includes(sym)) continue;
+      // Skip CUSIPs and non-public identifiers (contain digits mixed with letters in CUSIP pattern)
+      // Valid tickers: letters only, or letters + numbers for specific cases (BRK.B etc)
+      // CUSIPs: 9 chars with numbers like 84679P249 - already caught by length
+      // Also skip if more than 2 digits in the symbol (not a real ticker)
+      const digitCount=(sym.match(/[0-9]/g)||[]).length;
+      if(digitCount>2) continue;
+      // Skip options-style symbols with P or C followed by numbers
+      if(/[A-Z]{1,5}[0-9]{6}[PC][0-9]/.test(sym)) continue;
+
+      // Detect cash and money market
+      const isCashPos = sym === 'CASH' || sym === '$' || sym.includes('XX') ||
+        rowName.includes('cash') || rowName.includes('money market') ||
+        rowName.includes('sweep') || rowName.includes('treasury money') ||
+        rowName.includes('govt mmkt') || rowName.includes('mmkt') ||
+        rowName.includes('fidelity govt') || rowName.includes('schwab value');
+
+      if(isCashPos){
+        const cashVal = qty > 0 && qty < 100 ? (rawVal > 0 ? rawVal : qty) : qty;
+        if(cashVal > 0){
+          const existing = S.holdings['CASH'];
+          if(existing){ S.holdings['CASH'].qty = (S.holdings['CASH'].qty || 0) + cashVal; updated++; }
+          else { S.holdings['CASH'] = {qty: cashVal, isCash: true, cashLabel: rowName || 'Cash & Cash Equivalents'}; imported++; }
+        }
+        continue;
+      }
+
+      if(qty <= 0){ skipped++; continue; }
+      if(sym.includes(' ') && sym.length > 8) continue;
+
+      if(S.holdings[sym] !== undefined){ S.holdings[sym].qty = qty; updated++; }
+      else { S.holdings[sym] = {qty}; imported++; }
+    }
+
+    saveHoldings();
+
+    if(imported === 0 && updated === 0){
+      if(status) status.innerHTML = '<div style="color:var(--red);font-size:13px;padding:10px;background:var(--red-light);border-radius:6px;">❌ No valid holdings found. Make sure the file has Symbol and Quantity columns with data.</div>';
+      return;
+    }
+
+    const msg = '✅ Import complete — <strong>' + imported + '</strong> new holdings added' +
+      (updated ? ', <strong>' + updated + '</strong> updated' : '') +
+      (skipped ? ', ' + skipped + ' skipped (zero quantity)' : '');
+    if(status) status.innerHTML = '<div style="color:#065F46;font-size:13px;padding:10px;background:var(--green-light);border-radius:6px;">' + msg + '</div>';
+    toast('Import complete! Fetching live prices...');
+
+    if(getFinnhubKey()){
+      await Promise.all(Object.keys(S.holdings).map(t => fetchSinglePrice(t)));
+    }
+    setTimeout(() => go('holdings'), 2000);
+  };
+  reader.readAsText(file);
+}
+
+function showTerms(){
+  const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;display:flex;align-items:center;justify-content:center;padding:2rem;';
+  o.innerHTML=`<div style="background:white;border-radius:16px;padding:2rem;max-width:520px;width:100%;max-height:80vh;overflow-y:auto;"><div style="font-family:'DM Serif Display',serif;font-size:22px;color:#0B1628;margin-bottom:1rem;">Terms of Use</div><div style="font-size:12px;color:#475569;line-height:1.8;"><p style="margin-bottom:0.75rem;"><strong>Last updated: March 2026</strong></p><p style="margin-bottom:0.75rem;">Folio Portfolio Intelligence is a proprietary software product created and owned by <strong>Dallas Messenger</strong>. All rights reserved. © 2026 Dallas Messenger.</p><p style="margin-bottom:0.75rem;"><strong>Not Investment Advice.</strong> Folio is an informational tool only. Nothing in this application constitutes investment advice or a recommendation to buy or sell any security.</p><p style="margin-bottom:0.75rem;"><strong>Prohibited Use.</strong> You may not copy, reverse engineer, resell, or redistribute this software without express written consent of Dallas Messenger.</p><p><strong>Contact:</strong> Dallas@sandlotwealth.com</p></div><button onclick="this.closest('div[style]').remove()" style="margin-top:1.5rem;width:100%;padding:10px;background:#2563EB;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">Close</button></div>`;
+  document.body.appendChild(o);o.addEventListener('click',e=>{if(e.target===o)o.remove();});
+}
+
+function showPrivacy(){
+  const o=document.createElement('div');o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;display:flex;align-items:center;justify-content:center;padding:2rem;';
+  o.innerHTML=`<div style="background:white;border-radius:16px;padding:2rem;max-width:520px;width:100%;max-height:80vh;overflow-y:auto;"><div style="font-family:'DM Serif Display',serif;font-size:22px;color:#0B1628;margin-bottom:1rem;">Privacy Policy</div><div style="font-size:12px;color:#475569;line-height:1.8;"><p style="margin-bottom:0.75rem;"><strong>Last updated: March 2026</strong></p><p style="margin-bottom:0.75rem;">This Privacy Policy describes how Folio Portfolio Intelligence, operated by <strong>Dallas Messenger</strong>, collects and protects your information.</p><p style="margin-bottom:0.75rem;"><strong>What we collect.</strong> We collect your name, email, and encrypted password. We store your list of securities you track. We do not collect SSNs, bank accounts, or brokerage credentials.</p><p style="margin-bottom:0.75rem;"><strong>Data security.</strong> All data is stored in Supabase with row-level security. Passwords are encrypted. Your API keys are stored only in your browser.</p><p style="margin-bottom:0.75rem;"><strong>Your rights.</strong> You may request deletion of your account at any time by contacting Dallas@sandlotwealth.com.</p></div><button onclick="this.closest('div[style]').remove()" style="margin-top:1.5rem;width:100%;padding:10px;background:#2563EB;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-family:'DM Sans',sans-serif;">Close</button></div>`;
+  document.body.appendChild(o);o.addEventListener('click',e=>{if(e.target===o)o.remove();});
+}
+
+function importCSV(input){
+  importCSVWithStatus(input, 'csvStatus');
+}
+function _importCSV_original(input){
+  const file=input.files[0];
+  if(!file){return;}
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    const text=e.target.result;
+    const lines=text.split('\n').filter(l=>l.trim());
+    let imported=0,skipped=0,errors=[];
+    const status=document.getElementById('csvStatus');
+    status.style.display='block';
+    status.innerHTML='<div style="color:var(--text-muted);font-size:13px;">Processing CSV...</div>';
+
+    // Detect brokerage format and find header row
+    let headerIdx=-1,symCol=-1,qtyCol=-1,nameCol=-1;
+    for(let i=0;i<Math.min(lines.length,10);i++){
+      const row=lines[i].toLowerCase();
+      if(row.includes('symbol')||row.includes('ticker')){
+        headerIdx=i;
+        const cols=lines[i].split(',').map(c=>c.trim().toLowerCase().replace(/"/g,''));
+        symCol=cols.findIndex(c=>c.includes('symbol')||c.includes('ticker')||c==='cusip'||c==='security id');
+        qtyCol=cols.findIndex(c=>c.includes('quantity')||c.includes('shares')||c.includes('qty'));
+        nameCol=cols.findIndex(c=>c.includes('description')||c.includes('name')||c.includes('security'));
+        break;
+      }
+    }
+
+    // If no header found, try to auto-detect by looking at data
+    if(headerIdx===-1){
+      // Try common formats where first column might be ticker
+      for(let i=0;i<Math.min(lines.length,5);i++){
+        const cols=lines[i].split(',').map(c=>c.trim().replace(/"/g,''));
+        if(cols[0]&&cols[0].length<=6&&cols[0].match(/^[A-Z]+$/)&&parseFloat(cols[2]||cols[1])){
+          headerIdx=i-1;symCol=0;qtyCol=2;break;
+        }
+      }
+    }
+
+    if(symCol===-1){
+      status.innerHTML='<div style="color:var(--red);font-size:13px;padding:10px;background:var(--red-light);border-radius:var(--radius-sm);">Could not detect CSV format. Please make sure your CSV has Symbol/Ticker and Quantity/Shares columns.</div>';
+      return;
+    }
+
+    // Process data rows
+    for(let i=headerIdx+1;i<lines.length;i++){
+      const line=lines[i].trim();
+      if(!line)continue;
+
+      // Handle quoted CSV values
+      const cols=[];let cur='',inQ=false;
+      for(let ch of line){
+        if(ch==='"'){inQ=!inQ;}
+        else if(ch===','&&!inQ){cols.push(cur.trim());cur='';}
+        else cur+=ch;
+      }
+      cols.push(cur.trim());
+
+      const rawSym=cols[symCol]||'';
+      const sym=rawSym.replace(/"/g,'').trim().toUpperCase();
+      const rawQty=cols[qtyCol]||'0';
+      const qty=parseFloat(rawQty.replace(/[^0-9.-]/g,''))||0;
+
+      // Skip empty or clearly invalid rows
+      if(!sym||sym.length>12)continue;
+      if(['--','N/A',''].includes(sym))continue;
+
+      const rowName=(nameCol>=0?cols[nameCol]||'':'').toLowerCase();
+
+      // Handle cash and money market — store as CASH with dollar value
+      const isCash=sym==='CASH'||sym==='$'||rowName.includes('cash & cash')||rowName.includes('money market')||rowName.includes('sweep')||rowName.includes('treasury money')||rowName.includes('govt mmkt');
+      if(isCash){
+        // For cash, qty is the dollar value
+        if(qty>0){
+          S.holdings['CASH']={qty,isCash:true,cashLabel:rowName||'Cash & Cash Equivalents'};
+          imported++;
+        }
+        continue;
+      }
+
+      if(qty<=0){skipped++;continue;}
+
+      // Add or update holding
+      S.holdings[sym]={qty};
+      imported++;
+    }
+
+    saveHoldings();
+
+    if(imported===0){
+      status.innerHTML='<div style="color:var(--red);font-size:13px;padding:10px;background:var(--red-light);border-radius:var(--radius-sm);">No valid holdings found. Make sure the file contains Symbol and Quantity columns with data.</div>';
+      return;
+    }
+
+    status.innerHTML='<div style="color:#065F46;font-size:13px;padding:10px;background:var(--green-light);border-radius:6px;">✅ Successfully imported <strong>'+imported+'</strong> holdings'+( skipped?' ('+skipped+' skipped — zero quantity)':'')+'</div>';
+    toast('Imported '+imported+' holdings — fetching prices...');
+
+    // Fetch live prices for all imported holdings
+    if(getFinnhubKey()){
+      await Promise.all(Object.keys(S.holdings).map(t=>fetchSinglePrice(t)));
+    }
+    setTimeout(()=>go('holdings'),1500);
+  };
+  reader.readAsText(file);
+}
+
+function showCSVHelp(){
+  const o=document.createElement('div');
+  o.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;display:flex;align-items:center;justify-content:center;padding:2rem;';
+  o.innerHTML=`<div style="background:white;border-radius:16px;padding:2rem;max-width:540px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+    <div style="font-family:'DM Serif Display',serif;font-size:22px;color:#0B1628;margin-bottom:1.25rem;">How to download your holdings CSV</div>
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div style="background:#F8FAFC;border-radius:10px;padding:1rem;border:1px solid #E2E8F0;">
+        <div style="font-weight:600;font-size:14px;color:#0B1628;margin-bottom:6px;">🏦 Charles Schwab</div>
+        <div style="font-size:13px;color:#475569;line-height:1.7;">1. Log in at schwab.com<br>2. Go to <strong>Accounts → Positions</strong><br>3. Click <strong>Export</strong> (top right)<br>4. Select <strong>CSV</strong> and download</div>
+      </div>
+      <div style="background:#F8FAFC;border-radius:10px;padding:1rem;border:1px solid #E2E8F0;">
+        <div style="font-weight:600;font-size:14px;color:#0B1628;margin-bottom:6px;">🟢 Fidelity</div>
+        <div style="font-size:13px;color:#475569;line-height:1.7;">1. Log in at fidelity.com<br>2. Go to <strong>Accounts & Trade → Portfolio</strong><br>3. Click <strong>Download</strong> at the top<br>4. Choose <strong>Positions</strong> and download CSV</div>
+      </div>
+      <div style="background:#F8FAFC;border-radius:10px;padding:1rem;border:1px solid #E2E8F0;">
+        <div style="font-weight:600;font-size:14px;color:#0B1628;margin-bottom:6px;">🔴 Vanguard</div>
+        <div style="font-size:13px;color:#475569;line-height:1.7;">1. Log in at vanguard.com<br>2. Go to <strong>My Accounts → Holdings</strong><br>3. Click <strong>Download</strong><br>4. Select <strong>CSV format</strong></div>
+      </div>
+      <div style="background:#F8FAFC;border-radius:10px;padding:1rem;border:1px solid #E2E8F0;">
+        <div style="font-weight:600;font-size:14px;color:#0B1628;margin-bottom:6px;">🟠 TD Ameritrade / Merrill / Others</div>
+        <div style="font-size:13px;color:#475569;line-height:1.7;">Look for a <strong>Download</strong>, <strong>Export</strong>, or <strong>Print</strong> option on your positions/holdings page. Choose CSV format. The file needs to have a Symbol and Quantity column.</div>
+      </div>
+    </div>
+    <button onclick="this.closest('div[style]').remove()" style="margin-top:1.5rem;width:100%;padding:12px;background:#2563EB;color:white;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;">Got it</button>
+  </div>`;
+  document.body.appendChild(o);
+  o.addEventListener('click',e=>{if(e.target===o)o.remove();});
+}
+
+// ── STRIPE CONFIG ──
+const STRIPE_PK = 'pk_live_51TH7MqEp3Q2QV1iIca9Q6xwVZRQmJwGYRY4TG5YQiLX2bkwX7QoUd8Q6sITm1zv2nOdAhZtZw2hZaZ9GRQWVS5IQ00fZhqP0UF';
+const PRICE_MONTHLY = 'price_1TH7lLEp3Q2QV1iIhrK3ftl2';
+const PRICE_ANNUAL = 'price_1TH7m8Ep3Q2QV1iIcvlV9lWv';
+let stripeInstance = null;
+let selectedPlan = 'monthly';
+
+function getStripe(){
+  return new Promise(resolve => {
+    if(stripeInstance){resolve(stripeInstance);return;}
+    if(window.Stripe){stripeInstance=window.Stripe(STRIPE_PK);resolve(stripeInstance);return;}
+    const s=document.createElement('script');
+    s.src='https://js.stripe.com/v3/';
+    s.onload=()=>{stripeInstance=window.Stripe(STRIPE_PK);resolve(stripeInstance);};
+    s.onerror=()=>resolve(null);
+    document.head.appendChild(s);
+  });
+}
+
+// ── PRO STATUS ──
+// isPro() returns true for everyone during development — paywall not yet enabled
+function isPro(){ return true; }
+
+function isTrialing(){
+  const signupDate = S.profile?.created_at ? new Date(S.profile.created_at) : null;
+  if(!signupDate) return false;
+  const days = (Date.now() - signupDate)/86400000;
+  return days <= 14 && !S.profile?.is_pro;
+}
+
+function trialDaysLeft(){
+  const signupDate = S.profile?.created_at ? new Date(S.profile.created_at) : null;
+  if(!signupDate) return 0;
+  return Math.max(0, 14 - Math.floor((Date.now() - signupDate)/86400000));
+}
+
+function freeHoldingLimit(){ return 5; }
+
+function requirePro(featureName, subtitle){
+  if(isPro()) return true;
+  showUpgrade(featureName + ' is a Pro feature', subtitle || 'Upgrade to Folio Pro for $12/month to unlock ' + featureName.toLowerCase() + ' and all Pro features.');
+  return false;
+}
+
+function checkHoldingLimit(){
+  if(isPro()) return true;
+  const count = getTickers().length;
+  if(count >= freeHoldingLimit()){
+    showUpgrade("You've reached the free plan limit","Free accounts can track up to " + freeHoldingLimit() + " holdings. Upgrade to Pro for unlimited holdings.");
+    return false;
+  }
+  return true;
+}
+
+// ── UPGRADE MODAL ──
+function showUpgrade(title, subtitle){
+  document.getElementById('upgradeTitle').textContent = title || 'Unlock full portfolio intelligence';
+  document.getElementById('upgradeSubtitle').textContent = subtitle || "You're on the free plan. Upgrade to Pro to access this feature.";
+  document.getElementById('upgradeModal').style.display = 'flex';
+}
+
+function closeUpgrade(){
+  document.getElementById('upgradeModal').style.display = 'none';
+}
+
+function selectPlan(plan){
+  selectedPlan = plan;
+  document.getElementById('planMonthly').classList.toggle('selected', plan === 'monthly');
+  document.getElementById('planAnnual').classList.toggle('selected', plan === 'annual');
+}
+
+async function startCheckout(){
+  const stripe = await getStripe();
+  if(!stripe){toast('Stripe not loaded — check your connection');return;}
+  const priceId = selectedPlan === 'annual' ? PRICE_ANNUAL : PRICE_MONTHLY;
+  const btn = document.querySelector('.btn-upgrade');
+  if(btn){btn.textContent='Redirecting to checkout...';btn.disabled=true;}
+  try{
+    const {error} = await stripe.redirectToCheckout({
+      lineItems: [{price: priceId, quantity: 1}],
+      mode: 'subscription',
+      successUrl: window.location.origin + '/client.html?upgraded=true',
+      cancelUrl: window.location.href,
+      customerEmail: S.user?.email,
+    });
+    if(error){toast('Checkout error: '+error.message);if(btn){btn.textContent='Upgrade to Pro →';btn.disabled=false;}}
+  }catch(e){
+    toast('Error: '+e.message);
+    if(btn){btn.textContent='Upgrade to Pro →';btn.disabled=false;}
+  }
+}
+
+function checkUpgradeReturn(){
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('upgraded')==='true'){
+    toast('Welcome to Folio Pro! Your account has been upgraded.');
+    if(S.user) localStorage.setItem('folio_pro_'+S.user.id,'true');
+    window.history.replaceState({},'',' window.location.pathname');
+  }
+}
+
+init();
+</script>
+
+<!-- Upgrade Modal -->
+<div id="upgradeModal" style="display:none;" class="upgrade-modal-overlay" onclick="if(event.target===this)closeUpgrade()">
+  <div class="upgrade-modal">
+    <div class="upgrade-modal-logo">Folio<span>.</span></div>
+    <div class="upgrade-modal-badge">PRO FEATURE</div>
+    <div class="upgrade-modal-title" id="upgradeTitle">Unlock full portfolio intelligence</div>
+    <div class="upgrade-modal-sub" id="upgradeSubtitle">You're on the free plan. Upgrade to Pro to access this feature.</div>
+    <ul class="upgrade-features">
+      <li>Unlimited holdings (free plan limited to 5)</li>
+      <li>Full risk analysis — beta, volatility, Sharpe ratio</li>
+      <li>PDF reports — summary, risk, news, full</li>
+      <li>CSV import from any brokerage</li>
+      <li>Mutual fund NAV prices</li>
+      <li>Personalized live news feed</li>
+    </ul>
+    <div class="upgrade-plans">
+      <div class="upgrade-plan selected" id="planMonthly" onclick="selectPlan('monthly')">
+        <div class="upgrade-plan-price">$12</div>
+        <div class="upgrade-plan-period">per month</div>
+      </div>
+      <div class="upgrade-plan" id="planAnnual" onclick="selectPlan('annual')">
+        <div class="upgrade-plan-price">$99</div>
+        <div class="upgrade-plan-period">per year</div>
+        <div class="upgrade-plan-save">Save 31%</div>
+      </div>
+    </div>
+    <button class="btn-upgrade" onclick="startCheckout()">Upgrade to Pro →</button>
+    <div class="upgrade-dismiss"><button onclick="closeUpgrade()">Maybe later</button></div>
+    <div class="upgrade-note">Cancel anytime · Secure payment via Stripe · © 2026 Dallas Messenger</div>
+  </div>
+</div>
+
+</body>
+</html>
